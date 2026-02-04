@@ -3,10 +3,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
+const fs = require('fs');
 const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3100;
+const LOG_FILE = path.join(__dirname, 'merge-logs.json');
 
 // OpenAI API Key aus Environment
 const openai = new OpenAI({
@@ -15,6 +17,63 @@ const openai = new OpenAI({
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.static('.'));
+
+// Basic Auth Middleware
+function basicAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  
+  if (!auth) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+    return res.status(401).send('Authentication required');
+  }
+  
+  const [scheme, credentials] = auth.split(' ');
+  if (scheme !== 'Basic') {
+    return res.status(401).send('Invalid auth scheme');
+  }
+  
+  const [username, password] = Buffer.from(credentials, 'base64').toString().split(':');
+  
+  // Admin credentials from env or default
+  const adminUser = process.env.ADMIN_USER || 'admin';
+  const adminPass = process.env.ADMIN_PASSWORD || 'merge2026';
+  
+  if (username === adminUser && password === adminPass) {
+    next();
+  } else {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+    res.status(401).send('Invalid credentials');
+  }
+}
+
+// Log merge activity
+function logMerge(ip, style, imageUrl) {
+  const logs = readLogs();
+  logs.push({
+    timestamp: new Date().toISOString(),
+    ip: ip,
+    style: style,
+    imageUrl: imageUrl
+  });
+  
+  // Keep last 1000 entries
+  if (logs.length > 1000) {
+    logs.splice(0, logs.length - 1000);
+  }
+  
+  fs.writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2));
+}
+
+function readLogs() {
+  try {
+    if (fs.existsSync(LOG_FILE)) {
+      return JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Error reading logs:', err);
+  }
+  return [];
+}
 
 // Style-Presets
 const STYLE_PRESETS = {
@@ -140,6 +199,10 @@ Style: ${stylePreset.suffix}`;
     
     console.log('✅ Bild erfolgreich kombiniert!');
     
+    // Log the merge
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logMerge(clientIp, style, imageUrl);
+    
     res.json({
       imageUrl: imageUrl,
       description1: desc1,
@@ -153,7 +216,17 @@ Style: ${stylePreset.suffix}`;
   }
 });
 
+// Admin routes
+app.get('/admin/logs', basicAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/admin/logs/data', basicAuth, (req, res) => {
+  res.json(readLogs());
+});
+
 app.listen(PORT, () => {
   console.log(`🎨 Bild-Kombinator läuft auf http://localhost:${PORT}`);
   console.log('💡 OpenAI API Key:', process.env.OPENAI_API_KEY ? '✓ gesetzt' : '✗ fehlt');
+  console.log('🔒 Admin: https://merge.eulencode.de/admin/logs');
 });

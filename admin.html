@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Admin Logs - Bild-Kombinator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-box h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .stat-box p {
+            opacity: 0.9;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        img {
+            max-width: 100px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 10px;
+        }
+        
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+        
+        .refresh-btn:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Admin Logs - Bild-Kombinator</h1>
+        
+        <button class="refresh-btn" onclick="loadLogs()">🔄 Aktualisieren</button>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <h3 id="totalCount">-</h3>
+                <p>Total Merges</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="todayCount">-</h3>
+                <p>Heute</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="uniqueIps">-</h3>
+                <p>Unique IPs</p>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Zeitstempel</th>
+                    <th>IP</th>
+                    <th>Stil</th>
+                    <th>Bild</th>
+                </tr>
+            </thead>
+            <tbody id="logTable">
+                <tr><td colspan="4">Lade Logs...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="modal" id="modal" onclick="this.classList.remove('show')">
+        <img id="modalImage">
+    </div>
+    
+    <script>
+        async function loadLogs() {
+            try {
+                const response = await fetch('/admin/logs/data');
+                const logs = await response.json();
+                
+                // Stats
+                document.getElementById('totalCount').textContent = logs.length;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const todayLogs = logs.filter(l => l.timestamp.startsWith(today));
+                document.getElementById('todayCount').textContent = todayLogs.length;
+                
+                const uniqueIps = new Set(logs.map(l => l.ip)).size;
+                document.getElementById('uniqueIps').textContent = uniqueIps;
+                
+                // Table
+                const tbody = document.getElementById('logTable');
+                tbody.innerHTML = '';
+                
+                // Reverse to show newest first
+                logs.reverse().forEach(log => {
+                    const tr = document.createElement('tr');
+                    
+                    const date = new Date(log.timestamp);
+                    const dateStr = date.toLocaleString('de-DE');
+                    
+                    tr.innerHTML = `
+                        <td>${dateStr}</td>
+                        <td>${log.ip}</td>
+                        <td>${log.style || 'realistic'}</td>
+                        <td><img src="${log.imageUrl}" onclick="showModal('${log.imageUrl}'); event.stopPropagation();"></td>
+                    `;
+                    
+                    tbody.appendChild(tr);
+                });
+                
+            } catch (err) {
+                console.error('Error loading logs:', err);
+                document.getElementById('logTable').innerHTML = '<tr><td colspan="4">❌ Fehler beim Laden</td></tr>';
+            }
+        }
+        
+        function showModal(url) {
+            document.getElementById('modalImage').src = url;
+            document.getElementById('modal').classList.add('show');
+        }
+        
+        // Load on page load
+        loadLogs();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadLogs, 30000);
+    </script>
+</body>
+</html>
