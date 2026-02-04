@@ -325,7 +325,7 @@ app.get('/admin/logs/data', basicAuth, (req, res) => {
 // Serve uploaded images
 app.use('/admin/uploads', basicAuth, express.static(UPLOADS_DIR));
 
-// Delete entry
+// Delete entry (with folder)
 app.delete('/admin/logs/:sessionDir/:sessionId', basicAuth, (req, res) => {
   try {
     const { sessionDir, sessionId } = req.params;
@@ -345,6 +345,26 @@ app.delete('/admin/logs/:sessionDir/:sessionId', basicAuth, (req, res) => {
     fs.writeFileSync(LOG_FILE, JSON.stringify(filteredLogs, null, 2));
     
     res.json({ success: true, message: 'Eintrag gelöscht' });
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete old entry (log only, no folder)
+app.delete('/admin/logs/old/:index', basicAuth, (req, res) => {
+  try {
+    const index = parseInt(req.params.index);
+    const logs = readLogs();
+    
+    if (index >= 0 && index < logs.length) {
+      logs.splice(index, 1);
+      fs.writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2));
+      console.log(`🗑️ Deleted old log entry at index ${index}`);
+      res.json({ success: true, message: 'Log-Eintrag gelöscht' });
+    } else {
+      res.status(404).json({ error: 'Index not found' });
+    }
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ error: err.message });

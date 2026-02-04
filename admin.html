@@ -187,11 +187,14 @@
                 tbody.innerHTML = '';
                 
                 // Reverse to show newest first
-                logs.reverse().forEach(log => {
+                logs.reverse().forEach((log, displayIndex) => {
                     const tr = document.createElement('tr');
                     
                     const date = new Date(log.timestamp);
                     const dateStr = date.toLocaleString('de-DE');
+                    
+                    // Calculate original index in non-reversed array
+                    const originalIndex = logs.length - 1 - displayIndex;
                     
                     let source1Html = '-';
                     let source2Html = '-';
@@ -238,6 +241,9 @@
                     let deleteHtml = '';
                     if (log.sessionDir && log.sessionId) {
                         deleteHtml = `<button onclick="deleteEntry('${log.sessionDir}', '${log.sessionId}'); event.stopPropagation();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 1.2em;" title="Löschen">🗑️</button>`;
+                    } else {
+                        // Old logs without folder - delete only from log
+                        deleteHtml = `<button onclick="deleteOldEntry(${originalIndex}); event.stopPropagation();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 1.2em;" title="Nur Log-Eintrag löschen">🗑️</button>`;
                     }
                     
                     tr.innerHTML = `
@@ -272,6 +278,28 @@
             
             try {
                 const response = await fetch(`/admin/logs/${sessionDir}/${sessionId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('✅ Eintrag gelöscht');
+                    loadLogs(); // Reload table
+                } else {
+                    alert('❌ Fehler beim Löschen');
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+                alert('❌ Fehler: ' + err.message);
+            }
+        }
+        
+        async function deleteOldEntry(index) {
+            if (!confirm('Log-Eintrag löschen?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/logs/old/${index}`, {
                     method: 'DELETE'
                 });
                 
