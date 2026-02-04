@@ -26,6 +26,10 @@ const STYLE_PRESETS = {
     name: 'Spielzeug',
     suffix: 'Create this as a cute, colorful toy or action figure with plastic/vinyl texture, rounded edges, and playful proportions. Think collectible toy style.'
   },
+  cute_monster: {
+    name: 'Niedliche Monster',
+    suffix: 'IMPORTANT: Completely transform this into cute/adorable anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: giant googly eyes, exaggerated happy facial expressions, chubby rounded bodies, smooth 3D render aesthetic, vibrant pastel colors. Think "Cheesed to meet you" TikTok memes - turn EVERYTHING into living characters with personality, faces, and that signature unsettling cuteness. Ignore realism completely - make it look like a Pixar fever dream crossed with wholesome memes.'
+  },
   brainrot: {
     name: 'Brainrot',
     suffix: 'IMPORTANT: Transform this into CURSED anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: oversized bulging eyes (slightly wrong), uncanny facial expressions, weird proportions, smooth 3D render but deliberately unsettling, oversaturated colors. Think "Cheesed to meet you" but make it CREEPY - not cute. Characters should look slightly wrong, unnerving, with that signature brainrot energy. Dead stare, too-wide smile, body horror vibes. Ignore realism - make it look like a fever dream that went too far.'
@@ -99,7 +103,7 @@ app.post('/api/merge', async (req, res) => {
     // Kombinations-Prompt generieren mit Style-spezifischer Struktur
     let mergePrompt;
     
-    if (style === 'brainrot') {
+    if (style === 'brainrot' || style === 'cute_monster') {
       // Für Brainrot: Ignoriere die realistischen Beschreibungen, mache Monster
       mergePrompt = `Take inspiration from these two things and create a NEW CHARACTER:
 
