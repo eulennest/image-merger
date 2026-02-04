@@ -152,10 +152,11 @@
                     <th>Source 1</th>
                     <th>Source 2</th>
                     <th>Result</th>
+                    <th>Meta</th>
                 </tr>
             </thead>
             <tbody id="logTable">
-                <tr><td colspan="6">Lade Logs...</td></tr>
+                <tr><td colspan="7">Lade Logs...</td></tr>
             </tbody>
         </table>
     </div>
@@ -194,12 +195,16 @@
                     let source1Html = '-';
                     let source2Html = '-';
                     let resultHtml = '-';
+                    let metaHtml = '-';
                     
                     if (log.meta && log.meta.files) {
                         const basePath = `/admin/uploads/${log.sessionDir}`;
+                        const metaFile = `${log.sessionId}_meta.json`;
+                        
                         source1Html = `<img src="${basePath}/${log.meta.files.source1}" onclick="showModal('${basePath}/${log.meta.files.source1}'); event.stopPropagation();">`;
                         source2Html = `<img src="${basePath}/${log.meta.files.source2}" onclick="showModal('${basePath}/${log.meta.files.source2}'); event.stopPropagation();">`;
                         resultHtml = `<img src="${basePath}/${log.meta.files.result}" onclick="showModal('${basePath}/${log.meta.files.result}'); event.stopPropagation();">`;
+                        metaHtml = `<a href="${basePath}/${metaFile}" download style="text-decoration: none; font-size: 1.5em;" title="Metadaten herunterladen">📄</a>`;
                     } else if (log.imageUrl) {
                         // Fallback for old logs
                         resultHtml = `<img src="${log.imageUrl}" onclick="showModal('${log.imageUrl}'); event.stopPropagation();">`;
@@ -212,6 +217,7 @@
                         <td>${source1Html}</td>
                         <td>${source2Html}</td>
                         <td>${resultHtml}</td>
+                        <td>${metaHtml}</td>
                     `;
                     
                     tbody.appendChild(tr);
