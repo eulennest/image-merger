@@ -28,7 +28,7 @@ const STYLE_PRESETS = {
   },
   brainrot: {
     name: 'Brainrot',
-    suffix: 'Create this in an extremely chaotic, overstimulated, meme-filled brainrot aesthetic with glitchy effects, oversaturated colors, random objects floating around, distorted proportions, and maximum visual chaos. Think TikTok/YouTube Kids fever dream.'
+    suffix: 'Transform this into the Italy brainrot meme style: surreal 3D rendered animals or characters with oversized heads, giant expressive eyes, smooth low-poly aesthetic, pastel/saturated colors, cute but slightly unsettling proportions, and that specific TikTok Italy meme vibe (like "Cheesed to meet you"). Make it as a 3D character with that signature brainrot charm.'
   }
 };
 
