@@ -380,25 +380,44 @@
         }
         
         function capturePhoto(imageNumber, video) {
-            const canvas = document.getElementById(`canvas${imageNumber}`);
-            
-            // Warte bis Video ready ist
-            if (!video.videoWidth || !video.videoHeight) {
-                alert('Video noch nicht bereit, bitte nochmal versuchen');
-                return;
+            try {
+                const canvas = document.getElementById(`canvas${imageNumber}`);
+                
+                // Warte bis Video ready ist
+                if (!video.videoWidth || !video.videoHeight) {
+                    alert('Video noch nicht bereit, bitte nochmal versuchen');
+                    return;
+                }
+                
+                console.log('Video size:', video.videoWidth, 'x', video.videoHeight);
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                const ctx = canvas.getContext('2d');
+                
+                // Sicherstellen dass Video wirklich rendert wird
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                console.log('DataURL length:', dataUrl.length);
+                
+                if (dataUrl.length < 1000) {
+                    alert('Foto-Aufnahme fehlgeschlagen - bitte nochmal versuchen');
+                    return;
+                }
+                
+                // WICHTIG: Erst Bild setzen, DANN Kamera schließen
+                closeCamera(imageNumber, false);
+                setImage(imageNumber, dataUrl);
+                
+            } catch (err) {
+                console.error('Capture error:', err);
+                alert('Fehler beim Foto: ' + err.message);
+                closeCamera(imageNumber, false);
             }
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-            
-            // WICHTIG: Erst Bild setzen, DANN Kamera schließen
-            setImage(imageNumber, dataUrl);
-            closeCamera(imageNumber, true); // skipReset = true
         }
         
         function closeCamera(imageNumber, skipReset = false) {
