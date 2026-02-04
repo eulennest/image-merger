@@ -331,6 +331,7 @@
                 video.setAttribute('playsinline', '');
                 video.style.width = '100%';
                 video.style.borderRadius = '10px';
+                video.id = `video${imageNumber}`;
                 
                 // Kamera starten
                 currentStream = await navigator.mediaDevices.getUserMedia({
@@ -362,56 +363,73 @@
                 const captureBtn = document.createElement('button');
                 captureBtn.className = 'small-btn';
                 captureBtn.textContent = '📸 Foto';
-                captureBtn.onclick = () => capturePhoto(imageNumber, video);
+                captureBtn.type = 'button';
                 
                 const cancelBtn = document.createElement('button');
                 cancelBtn.className = 'small-btn';
                 cancelBtn.textContent = '❌ Abbrechen';
-                cancelBtn.onclick = () => closeCamera(imageNumber);
+                cancelBtn.type = 'button';
+                
+                // Event-Listener direkt anhängen (nicht onclick)
+                captureBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Foto-Button geklickt für Bild', imageNumber);
+                    capturePhoto(imageNumber, video);
+                });
+                
+                cancelBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Abbrechen-Button geklickt');
+                    closeCamera(imageNumber, false);
+                });
                 
                 controls.appendChild(captureBtn);
                 controls.appendChild(cancelBtn);
                 content.appendChild(controls);
                 
             } catch (err) {
+                console.error('Camera error:', err);
                 alert('Kamera-Zugriff fehlgeschlagen: ' + err.message);
-                closeCamera(imageNumber);
+                closeCamera(imageNumber, false);
             }
         }
         
         function capturePhoto(imageNumber, video) {
+            console.log('capturePhoto called for image', imageNumber);
             try {
                 const canvas = document.getElementById(`canvas${imageNumber}`);
                 
                 // Warte bis Video ready ist
                 if (!video.videoWidth || !video.videoHeight) {
+                    console.error('Video not ready:', video.videoWidth, video.videoHeight);
                     alert('Video noch nicht bereit, bitte nochmal versuchen');
                     return;
                 }
                 
-                console.log('Video size:', video.videoWidth, 'x', video.videoHeight);
+                console.log('Capturing video size:', video.videoWidth, 'x', video.videoHeight);
                 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 
                 const ctx = canvas.getContext('2d');
-                
-                // Sicherstellen dass Video wirklich rendert wird
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-                console.log('DataURL length:', dataUrl.length);
+                console.log('Captured image, dataURL length:', dataUrl.length);
                 
                 if (dataUrl.length < 1000) {
+                    console.error('DataURL too short:', dataUrl.length);
                     alert('Foto-Aufnahme fehlgeschlagen - bitte nochmal versuchen');
                     return;
                 }
                 
-                // WICHTIG: Erst Bild setzen, DANN Kamera schließen
-                closeCamera(imageNumber, false);
+                // Erst Bild setzen, DANN Kamera schließen
                 setImage(imageNumber, dataUrl);
+                closeCamera(imageNumber, true); // skipReset = true weil setImage schon alles gemacht hat
+                
+                console.log('Image captured and set successfully');
                 
             } catch (err) {
                 console.error('Capture error:', err);
