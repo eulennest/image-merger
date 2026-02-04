@@ -16,14 +16,33 @@ const openai = new OpenAI({
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.static('.'));
 
+// Style-Presets
+const STYLE_PRESETS = {
+  realistic: {
+    name: 'Realistisch',
+    suffix: 'Create a photorealistic image with detailed textures and natural lighting.'
+  },
+  toy: {
+    name: 'Spielzeug',
+    suffix: 'Create this as a cute, colorful toy or action figure with plastic/vinyl texture, rounded edges, and playful proportions. Think collectible toy style.'
+  },
+  brainrot: {
+    name: 'Brainrot',
+    suffix: 'Create this in an extremely chaotic, overstimulated, meme-filled brainrot aesthetic with glitchy effects, oversaturated colors, random objects floating around, distorted proportions, and maximum visual chaos. Think TikTok/YouTube Kids fever dream.'
+  }
+};
+
 // API Endpoint für Bild-Kombination
 app.post('/api/merge', async (req, res) => {
   try {
-    const { image1, image2 } = req.body;
+    const { image1, image2, style = 'realistic' } = req.body;
     
     if (!image1 || !image2) {
       return res.status(400).json({ error: 'Beide Bilder erforderlich' });
     }
+    
+    const stylePreset = STYLE_PRESETS[style] || STYLE_PRESETS.realistic;
+    console.log(`🎨 Stil: ${stylePreset.name}`);
     
     console.log('🎨 Analysiere Bild 1 mit GPT-4 Vision...');
     
@@ -83,7 +102,9 @@ app.post('/api/merge', async (req, res) => {
 Image 1: ${desc1}
 Image 2: ${desc2}
 
-Combine the key features, colors, and style elements from both descriptions into a single, harmonious image. Be creative and fun!`;
+Combine the key features, colors, and style elements from both descriptions into a single, harmonious image. Be creative and fun!
+
+Style: ${stylePreset.suffix}`;
     
     console.log('✨ Generiere kombiniertes Bild mit DALL-E 3...');
     

@@ -169,13 +169,27 @@
         }
         
         .loading {
-            text-align: center;
             display: none;
-            padding: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
         
         .loading.show {
-            display: block;
+            display: flex;
+        }
+        
+        .loading p {
+            color: white;
+            font-size: 1.2em;
+            margin-top: 20px;
         }
         
         .spinner {
@@ -239,6 +253,17 @@
                 <img id="preview2" style="display:none;">
                 <canvas id="canvas2" style="display:none;"></canvas>
             </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; text-align: center; font-size: 1.2em; margin-bottom: 10px; color: #667eea; font-weight: bold;">
+                🎨 Stil auswählen:
+            </label>
+            <select id="styleSelect" style="width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #667eea; border-radius: 10px; font-family: 'Comic Sans MS', cursive;">
+                <option value="realistic">📸 Realistisch</option>
+                <option value="toy">🧸 Spielzeug</option>
+                <option value="brainrot">🤪 Brainrot</option>
+            </select>
         </div>
         
         <button class="merge-btn" id="mergeBtn" disabled onclick="mergeImages()">
@@ -468,6 +493,7 @@
             const result = document.getElementById('result');
             const error = document.getElementById('error');
             const btn = document.getElementById('mergeBtn');
+            const style = document.getElementById('styleSelect').value;
             
             loading.classList.add('show');
             result.classList.remove('show');
@@ -482,7 +508,8 @@
                     },
                     body: JSON.stringify({
                         image1: image1,
-                        image2: image2
+                        image2: image2,
+                        style: style
                     })
                 });
                 
