@@ -153,10 +153,11 @@
                     <th>Source 2</th>
                     <th>Result</th>
                     <th>Meta</th>
+                    <th>Aktion</th>
                 </tr>
             </thead>
             <tbody id="logTable">
-                <tr><td colspan="7">Lade Logs...</td></tr>
+                <tr><td colspan="8">Lade Logs...</td></tr>
             </tbody>
         </table>
     </div>
@@ -234,6 +235,11 @@
                         resultHtml = `<img src="${log.imageUrl}" onclick="showModal('${log.imageUrl}'); event.stopPropagation();">`;
                     }
                     
+                    let deleteHtml = '';
+                    if (log.sessionDir && log.sessionId) {
+                        deleteHtml = `<button onclick="deleteEntry('${log.sessionDir}', '${log.sessionId}'); event.stopPropagation();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 1.2em;" title="Löschen">🗑️</button>`;
+                    }
+                    
                     tr.innerHTML = `
                         <td>${dateStr}</td>
                         <td>${ipHtml}</td>
@@ -242,6 +248,7 @@
                         <td>${source2Html}</td>
                         <td>${resultHtml}</td>
                         <td>${metaHtml}</td>
+                        <td>${deleteHtml}</td>
                     `;
                     
                     tbody.appendChild(tr);
@@ -256,6 +263,28 @@
         function showModal(url) {
             document.getElementById('modalImage').src = url;
             document.getElementById('modal').classList.add('show');
+        }
+        
+        async function deleteEntry(sessionDir, sessionId) {
+            if (!confirm('Wirklich löschen? Alle Bilder und Metadaten werden entfernt!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/logs/${sessionDir}/${sessionId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('✅ Eintrag gelöscht');
+                    loadLogs(); // Reload table
+                } else {
+                    alert('❌ Fehler beim Löschen');
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+                alert('❌ Fehler: ' + err.message);
+            }
         }
         
         // Load on page load

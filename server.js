@@ -325,6 +325,32 @@ app.get('/admin/logs/data', basicAuth, (req, res) => {
 // Serve uploaded images
 app.use('/admin/uploads', basicAuth, express.static(UPLOADS_DIR));
 
+// Delete entry
+app.delete('/admin/logs/:sessionDir/:sessionId', basicAuth, (req, res) => {
+  try {
+    const { sessionDir, sessionId } = req.params;
+    
+    // Delete folder with all files
+    const folderPath = path.join(UPLOADS_DIR, sessionDir);
+    if (fs.existsSync(folderPath)) {
+      fs.rmSync(folderPath, { recursive: true, force: true });
+      console.log(`🗑️ Deleted folder: ${sessionDir}`);
+    }
+    
+    // Remove from logs
+    const logs = readLogs();
+    const filteredLogs = logs.filter(log => 
+      !(log.sessionDir === sessionDir && log.sessionId === sessionId)
+    );
+    fs.writeFileSync(LOG_FILE, JSON.stringify(filteredLogs, null, 2));
+    
+    res.json({ success: true, message: 'Eintrag gelöscht' });
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🎨 Bild-Kombinator läuft auf http://localhost:${PORT}`);
   console.log('💡 OpenAI API Key:', process.env.OPENAI_API_KEY ? '✓ gesetzt' : '✗ fehlt');
