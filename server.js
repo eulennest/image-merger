@@ -28,7 +28,7 @@ const STYLE_PRESETS = {
   },
   brainrot: {
     name: 'Brainrot',
-    suffix: 'IMPORTANT: Completely transform this into cute/creepy anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: giant googly eyes, exaggerated facial expressions, chubby rounded bodies, smooth 3D render aesthetic, vibrant pastel colors. Think "Cheesed to meet you" TikTok memes - turn EVERYTHING into living characters with personality, faces, and that signature unsettling cuteness. Ignore realism completely - make it look like a Pixar fever dream crossed with cursed memes.'
+    suffix: 'IMPORTANT: Transform this into CURSED anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: oversized bulging eyes (slightly wrong), uncanny facial expressions, weird proportions, smooth 3D render but deliberately unsettling, oversaturated colors. Think "Cheesed to meet you" but make it CREEPY - not cute. Characters should look slightly wrong, unnerving, with that signature brainrot energy. Dead stare, too-wide smile, body horror vibes. Ignore realism - make it look like a fever dream that went too far.'
   }
 };
 
