@@ -49,7 +49,6 @@
             border-radius: 15px;
             padding: 30px;
             text-align: center;
-            cursor: pointer;
             transition: all 0.3s;
             position: relative;
             min-height: 250px;
@@ -59,24 +58,55 @@
             align-items: center;
         }
         
-        .upload-box:hover {
-            background: #f0f0ff;
-            border-color: #764ba2;
-        }
-        
         .upload-box.has-image {
             border-color: #4CAF50;
         }
         
-        .upload-box input {
-            display: none;
-        }
-        
-        .upload-box img {
+        .upload-box img, .upload-box video {
             max-width: 100%;
             max-height: 200px;
             border-radius: 10px;
             margin-top: 10px;
+        }
+        
+        .upload-content {
+            width: 100%;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .small-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .small-btn:hover {
+            transform: scale(1.05);
+            background: #764ba2;
+        }
+        
+        video {
+            width: 100%;
+            border-radius: 10px;
+        }
+        
+        .camera-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
         
         .upload-icon {
@@ -168,18 +198,32 @@
         <h1>🎨 Bild-Kombinator</h1>
         
         <div class="upload-section">
-            <div class="upload-box" id="upload1" onclick="document.getElementById('file1').click()">
-                <input type="file" id="file1" accept="image/*">
-                <div class="upload-icon">🖼️</div>
-                <div>Bild 1 hochladen</div>
+            <div class="upload-box" id="upload1">
+                <input type="file" id="file1" accept="image/*" style="display:none;">
+                <div class="upload-content" id="content1">
+                    <div class="upload-icon">🖼️</div>
+                    <div>Bild 1</div>
+                    <div class="button-group">
+                        <button class="small-btn" onclick="document.getElementById('file1').click(); event.stopPropagation();">📁 Datei</button>
+                        <button class="small-btn" onclick="openCamera(1); event.stopPropagation();">📷 Kamera</button>
+                    </div>
+                </div>
                 <img id="preview1" style="display:none;">
+                <canvas id="canvas1" style="display:none;"></canvas>
             </div>
             
-            <div class="upload-box" id="upload2" onclick="document.getElementById('file2').click()">
-                <input type="file" id="file2" accept="image/*">
-                <div class="upload-icon">🖼️</div>
-                <div>Bild 2 hochladen</div>
+            <div class="upload-box" id="upload2">
+                <input type="file" id="file2" accept="image/*" style="display:none;">
+                <div class="upload-content" id="content2">
+                    <div class="upload-icon">🖼️</div>
+                    <div>Bild 2</div>
+                    <div class="button-group">
+                        <button class="small-btn" onclick="document.getElementById('file2').click(); event.stopPropagation();">📁 Datei</button>
+                        <button class="small-btn" onclick="openCamera(2); event.stopPropagation();">📷 Kamera</button>
+                    </div>
+                </div>
                 <img id="preview2" style="display:none;">
+                <canvas id="canvas2" style="display:none;"></canvas>
             </div>
         </div>
         
@@ -203,6 +247,8 @@
     <script>
         let image1 = null;
         let image2 = null;
+        let currentStream = null;
+        let currentImageNumber = null;
         
         document.getElementById('file1').addEventListener('change', (e) => handleImageUpload(e, 1));
         document.getElementById('file2').addEventListener('change', (e) => handleImageUpload(e, 2));
@@ -213,22 +259,129 @@
             
             const reader = new FileReader();
             reader.onload = (e) => {
-                const preview = document.getElementById(`preview${imageNumber}`);
-                const uploadBox = document.getElementById(`upload${imageNumber}`);
-                
-                preview.src = e.target.result;
-                preview.style.display = 'block';
-                uploadBox.classList.add('has-image');
-                
-                if (imageNumber === 1) {
-                    image1 = e.target.result;
-                } else {
-                    image2 = e.target.result;
-                }
-                
-                checkReadyToMerge();
+                setImage(imageNumber, e.target.result);
             };
             reader.readAsDataURL(file);
+        }
+        
+        function setImage(imageNumber, dataUrl) {
+            const preview = document.getElementById(`preview${imageNumber}`);
+            const uploadBox = document.getElementById(`upload${imageNumber}`);
+            const content = document.getElementById(`content${imageNumber}`);
+            
+            preview.src = dataUrl;
+            preview.style.display = 'block';
+            content.style.display = 'none';
+            uploadBox.classList.add('has-image');
+            
+            // Klick zum Zurücksetzen
+            uploadBox.onclick = () => resetImage(imageNumber);
+            
+            if (imageNumber === 1) {
+                image1 = dataUrl;
+            } else {
+                image2 = dataUrl;
+            }
+            
+            checkReadyToMerge();
+        }
+        
+        function resetImage(imageNumber) {
+            const preview = document.getElementById(`preview${imageNumber}`);
+            const uploadBox = document.getElementById(`upload${imageNumber}`);
+            const content = document.getElementById(`content${imageNumber}`);
+            
+            preview.style.display = 'none';
+            content.style.display = 'block';
+            uploadBox.classList.remove('has-image');
+            uploadBox.onclick = null;
+            
+            if (imageNumber === 1) {
+                image1 = null;
+            } else {
+                image2 = null;
+            }
+            
+            checkReadyToMerge();
+        }
+        
+        async function openCamera(imageNumber) {
+            try {
+                currentImageNumber = imageNumber;
+                const uploadBox = document.getElementById(`upload${imageNumber}`);
+                const content = document.getElementById(`content${imageNumber}`);
+                
+                // Video-Element erstellen
+                const video = document.createElement('video');
+                video.setAttribute('autoplay', '');
+                video.setAttribute('playsinline', '');
+                video.style.width = '100%';
+                video.style.borderRadius = '10px';
+                
+                // Kamera starten
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' } // Rückkamera bevorzugen
+                });
+                
+                video.srcObject = currentStream;
+                
+                // UI ersetzen
+                content.innerHTML = '';
+                content.appendChild(video);
+                
+                // Aufnahme-Button
+                const controls = document.createElement('div');
+                controls.className = 'camera-controls';
+                
+                const captureBtn = document.createElement('button');
+                captureBtn.className = 'small-btn';
+                captureBtn.textContent = '📸 Foto';
+                captureBtn.onclick = () => capturePhoto(imageNumber, video);
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'small-btn';
+                cancelBtn.textContent = '❌ Abbrechen';
+                cancelBtn.onclick = () => closeCamera(imageNumber);
+                
+                controls.appendChild(captureBtn);
+                controls.appendChild(cancelBtn);
+                content.appendChild(controls);
+                
+            } catch (err) {
+                alert('Kamera-Zugriff fehlgeschlagen: ' + err.message);
+                closeCamera(imageNumber);
+            }
+        }
+        
+        function capturePhoto(imageNumber, video) {
+            const canvas = document.getElementById(`canvas${imageNumber}`);
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            
+            closeCamera(imageNumber);
+            setImage(imageNumber, dataUrl);
+        }
+        
+        function closeCamera(imageNumber) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            
+            const content = document.getElementById(`content${imageNumber}`);
+            content.innerHTML = `
+                <div class="upload-icon">🖼️</div>
+                <div>Bild ${imageNumber}</div>
+                <div class="button-group">
+                    <button class="small-btn" onclick="document.getElementById('file${imageNumber}').click(); event.stopPropagation();">📁 Datei</button>
+                    <button class="small-btn" onclick="openCamera(${imageNumber}); event.stopPropagation();">📷 Kamera</button>
+                </div>
+            `;
         }
         
         function checkReadyToMerge() {
