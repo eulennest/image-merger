@@ -334,10 +334,22 @@
                 
                 // Kamera starten
                 currentStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' } // Rückkamera bevorzugen
+                    video: { 
+                        facingMode: 'environment', // Rückkamera bevorzugen
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
                 });
                 
                 video.srcObject = currentStream;
+                
+                // Warte bis Video ready ist
+                await new Promise(resolve => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
                 
                 // UI ersetzen
                 content.innerHTML = '';
@@ -369,13 +381,20 @@
         
         function capturePhoto(imageNumber, video) {
             const canvas = document.getElementById(`canvas${imageNumber}`);
+            
+            // Warte bis Video ready ist
+            if (!video.videoWidth || !video.videoHeight) {
+                alert('Video noch nicht bereit, bitte nochmal versuchen');
+                return;
+            }
+            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             
             closeCamera(imageNumber);
             setImage(imageNumber, dataUrl);
