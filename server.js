@@ -4,11 +4,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const https = require('https');
 const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3100;
 const LOG_FILE = path.join(__dirname, 'merge-logs.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 // OpenAI API Key aus Environment
 const openai = new OpenAI({
@@ -46,14 +49,81 @@ function basicAuth(req, res, next) {
   }
 }
 
+// Create uploads directory
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Save images and metadata
+async function saveImageSet(ip, style, image1Base64, image2Base64, resultUrl, metadata) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const sessionId = crypto.randomUUID();
+  const sessionDir = path.join(UPLOADS_DIR, timestamp);
+  
+  fs.mkdirSync(sessionDir, { recursive: true });
+  
+  // Save source images (base64 -> file)
+  const image1Path = path.join(sessionDir, `${sessionId}_source1.jpg`);
+  const image2Path = path.join(sessionDir, `${sessionId}_source2.jpg`);
+  const resultPath = path.join(sessionDir, `${sessionId}_result.jpg`);
+  const metaPath = path.join(sessionDir, `${sessionId}_meta.json`);
+  
+  // Decode base64 and save
+  fs.writeFileSync(image1Path, image1Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+  fs.writeFileSync(image2Path, image2Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+  
+  // Download result image from DALL-E URL
+  await downloadImage(resultUrl, resultPath);
+  
+  // Save metadata
+  const meta = {
+    sessionId: sessionId,
+    timestamp: new Date().toISOString(),
+    ip: ip,
+    style: style,
+    files: {
+      source1: path.basename(image1Path),
+      source2: path.basename(image2Path),
+      result: path.basename(resultPath)
+    },
+    ...metadata
+  };
+  
+  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+  
+  return {
+    sessionDir: timestamp,
+    sessionId: sessionId,
+    meta: meta
+  };
+}
+
+// Download image from URL
+function downloadImage(url, filepath) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (response) => {
+      const fileStream = fs.createWriteStream(filepath);
+      response.pipe(fileStream);
+      fileStream.on('finish', () => {
+        fileStream.close();
+        resolve();
+      });
+    }).on('error', (err) => {
+      fs.unlink(filepath, () => {}); // Delete partial file
+      reject(err);
+    });
+  });
+}
+
 // Log merge activity
-function logMerge(ip, style, imageUrl) {
+function logMerge(ip, style, sessionDir, sessionId) {
   const logs = readLogs();
   logs.push({
     timestamp: new Date().toISOString(),
     ip: ip,
     style: style,
-    imageUrl: imageUrl
+    sessionDir: sessionDir,
+    sessionId: sessionId
   });
   
   // Keep last 1000 entries
@@ -199,9 +269,16 @@ Style: ${stylePreset.suffix}`;
     
     console.log('✅ Bild erfolgreich kombiniert!');
     
-    // Log the merge
+    // Save images and metadata
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logMerge(clientIp, style, imageUrl);
+    const savedData = await saveImageSet(clientIp, style, image1, image2, imageUrl, {
+      description1: desc1,
+      description2: desc2,
+      prompt: mergePrompt
+    });
+    
+    // Log the merge
+    logMerge(clientIp, style, savedData.sessionDir, savedData.sessionId);
     
     res.json({
       imageUrl: imageUrl,
@@ -222,8 +299,29 @@ app.get('/admin/logs', basicAuth, (req, res) => {
 });
 
 app.get('/admin/logs/data', basicAuth, (req, res) => {
-  res.json(readLogs());
+  const logs = readLogs();
+  
+  // Enrich logs with metadata
+  const enrichedLogs = logs.map(log => {
+    if (log.sessionDir && log.sessionId) {
+      const metaPath = path.join(UPLOADS_DIR, log.sessionDir, `${log.sessionId}_meta.json`);
+      try {
+        if (fs.existsSync(metaPath)) {
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+          return { ...log, meta };
+        }
+      } catch (err) {
+        console.error('Error reading meta:', err);
+      }
+    }
+    return log;
+  });
+  
+  res.json(enrichedLogs);
 });
+
+// Serve uploaded images
+app.use('/admin/uploads', basicAuth, express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
   console.log(`🎨 Bild-Kombinator läuft auf http://localhost:${PORT}`);
