@@ -196,6 +196,7 @@
                     let source2Html = '-';
                     let resultHtml = '-';
                     let metaHtml = '-';
+                    let ipHtml = log.ip;
                     
                     if (log.meta && log.meta.files) {
                         const basePath = `/admin/uploads/${log.sessionDir}`;
@@ -205,6 +206,29 @@
                         source2Html = `<img src="${basePath}/${log.meta.files.source2}" onclick="showModal('${basePath}/${log.meta.files.source2}'); event.stopPropagation();">`;
                         resultHtml = `<img src="${basePath}/${log.meta.files.result}" onclick="showModal('${basePath}/${log.meta.files.result}'); event.stopPropagation();">`;
                         metaHtml = `<a href="${basePath}/${metaFile}" download style="text-decoration: none; font-size: 1.5em;" title="Metadaten herunterladen">📄</a>`;
+                        
+                        // Add User-Agent info
+                        if (log.meta.userAgent) {
+                            const ua = log.meta.userAgent;
+                            let browser = 'Unknown';
+                            let device = '';
+                            
+                            // Parse User-Agent
+                            if (ua.includes('Chrome')) browser = '🌐 Chrome';
+                            else if (ua.includes('Firefox')) browser = '🦊 Firefox';
+                            else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = '🧭 Safari';
+                            else if (ua.includes('Edge')) browser = '🌊 Edge';
+                            
+                            if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) {
+                                device = '📱 Mobile';
+                            } else if (ua.includes('iPad')) {
+                                device = '📱 iPad';
+                            } else {
+                                device = '💻 Desktop';
+                            }
+                            
+                            ipHtml = `${log.ip}<br><small style="color: #666;">${device} ${browser}</small>`;
+                        }
                     } else if (log.imageUrl) {
                         // Fallback for old logs
                         resultHtml = `<img src="${log.imageUrl}" onclick="showModal('${log.imageUrl}'); event.stopPropagation();">`;
@@ -212,7 +236,7 @@
                     
                     tr.innerHTML = `
                         <td>${dateStr}</td>
-                        <td>${log.ip}</td>
+                        <td>${ipHtml}</td>
                         <td>${log.style || 'realistic'}</td>
                         <td>${source1Html}</td>
                         <td>${source2Html}</td>

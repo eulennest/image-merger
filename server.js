@@ -271,7 +271,9 @@ Style: ${stylePreset.suffix}`;
     
     // Save images and metadata
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'Unknown';
     const savedData = await saveImageSet(clientIp, style, image1, image2, imageUrl, {
+      userAgent: userAgent,
       description1: desc1,
       description2: desc2,
       prompt: mergePrompt
