@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Bild-Kombinator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .upload-box:hover {
+            background: #f0f0ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-box.has-image {
+            border-color: #4CAF50;
+        }
+        
+        .upload-box input {
+            display: none;
+        }
+        
+        .upload-box img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .merge-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 30px;
+        }
+        
+        .merge-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .merge-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-section {
+            text-align: center;
+            display: none;
+        }
+        
+        .result-section.show {
+            display: block;
+        }
+        
+        .result-section img {
+            max-width: 100%;
+            border-radius: 15px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            display: none;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #f44336;
+            padding: 15px;
+            background: #ffebee;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Bild-Kombinator</h1>
+        
+        <div class="upload-section">
+            <div class="upload-box" id="upload1" onclick="document.getElementById('file1').click()">
+                <input type="file" id="file1" accept="image/*">
+                <div class="upload-icon">🖼️</div>
+                <div>Bild 1 hochladen</div>
+                <img id="preview1" style="display:none;">
+            </div>
+            
+            <div class="upload-box" id="upload2" onclick="document.getElementById('file2').click()">
+                <input type="file" id="file2" accept="image/*">
+                <div class="upload-icon">🖼️</div>
+                <div>Bild 2 hochladen</div>
+                <img id="preview2" style="display:none;">
+            </div>
+        </div>
+        
+        <button class="merge-btn" id="mergeBtn" disabled onclick="mergeImages()">
+            ✨ Bilder kombinieren! ✨
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Die KI kombiniert deine Bilder... 🪄</p>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="result-section" id="result">
+            <h2>✨ Dein kombiniertes Bild:</h2>
+            <img id="resultImage">
+        </div>
+    </div>
+    
+    <script>
+        let image1 = null;
+        let image2 = null;
+        
+        document.getElementById('file1').addEventListener('change', (e) => handleImageUpload(e, 1));
+        document.getElementById('file2').addEventListener('change', (e) => handleImageUpload(e, 2));
+        
+        function handleImageUpload(event, imageNumber) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById(`preview${imageNumber}`);
+                const uploadBox = document.getElementById(`upload${imageNumber}`);
+                
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                uploadBox.classList.add('has-image');
+                
+                if (imageNumber === 1) {
+                    image1 = e.target.result;
+                } else {
+                    image2 = e.target.result;
+                }
+                
+                checkReadyToMerge();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function checkReadyToMerge() {
+            const btn = document.getElementById('mergeBtn');
+            btn.disabled = !(image1 && image2);
+        }
+        
+        async function mergeImages() {
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            const btn = document.getElementById('mergeBtn');
+            
+            loading.classList.add('show');
+            result.classList.remove('show');
+            error.classList.remove('show');
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/merge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image1: image1,
+                        image2: image2
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Kombination fehlgeschlagen');
+                }
+                
+                const data = await response.json();
+                
+                document.getElementById('resultImage').src = data.imageUrl;
+                result.classList.add('show');
+            } catch (err) {
+                error.textContent = '❌ Oops! Etwas ist schiefgelaufen. Versuche es nochmal!';
+                error.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
