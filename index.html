@@ -396,25 +396,29 @@
             
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             
-            closeCamera(imageNumber);
+            // WICHTIG: Erst Bild setzen, DANN Kamera schließen
             setImage(imageNumber, dataUrl);
+            closeCamera(imageNumber, true); // skipReset = true
         }
         
-        function closeCamera(imageNumber) {
+        function closeCamera(imageNumber, skipReset = false) {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
             }
             
-            const content = document.getElementById(`content${imageNumber}`);
-            content.innerHTML = `
-                <div class="upload-icon">🖼️</div>
-                <div>Bild ${imageNumber}</div>
-                <div class="button-group">
-                    <button class="small-btn" onclick="document.getElementById('file${imageNumber}').click(); event.stopPropagation();">📁 Datei</button>
-                    <button class="small-btn" onclick="openCamera(${imageNumber}); event.stopPropagation();">📷 Kamera</button>
-                </div>
-            `;
+            // Nur Content zurücksetzen wenn kein Bild gesetzt wurde
+            if (!skipReset) {
+                const content = document.getElementById(`content${imageNumber}`);
+                content.innerHTML = `
+                    <div class="upload-icon">🖼️</div>
+                    <div>Bild ${imageNumber}</div>
+                    <div class="button-group">
+                        <button class="small-btn" onclick="document.getElementById('file${imageNumber}').click(); event.stopPropagation();">📁 Datei</button>
+                        <button class="small-btn" onclick="openCamera(${imageNumber}); event.stopPropagation();">📷 Kamera</button>
+                    </div>
+                `;
+            }
         }
         
         function checkReadyToMerge() {
