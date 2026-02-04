@@ -28,7 +28,7 @@ const STYLE_PRESETS = {
   },
   brainrot: {
     name: 'Brainrot',
-    suffix: 'Transform this into the Italy brainrot meme style: surreal 3D rendered animals or characters with oversized heads, giant expressive eyes, smooth low-poly aesthetic, pastel/saturated colors, cute but slightly unsettling proportions, and that specific TikTok Italy meme vibe (like "Cheesed to meet you"). Make it as a 3D character with that signature brainrot charm.'
+    suffix: 'IMPORTANT: Completely transform this into cute/creepy anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: giant googly eyes, exaggerated facial expressions, chubby rounded bodies, smooth 3D render aesthetic, vibrant pastel colors. Think "Cheesed to meet you" TikTok memes - turn EVERYTHING into living characters with personality, faces, and that signature unsettling cuteness. Ignore realism completely - make it look like a Pixar fever dream crossed with cursed memes.'
   }
 };
 
@@ -96,8 +96,22 @@ app.post('/api/merge', async (req, res) => {
     console.log('📝 Bild 1:', desc1);
     console.log('📝 Bild 2:', desc2);
     
-    // Kombinations-Prompt generieren
-    const mergePrompt = `Create a creative combination that merges these two concepts into one cohesive image:
+    // Kombinations-Prompt generieren mit Style-spezifischer Struktur
+    let mergePrompt;
+    
+    if (style === 'brainrot') {
+      // Für Brainrot: Ignoriere die realistischen Beschreibungen, mache Monster
+      mergePrompt = `Take inspiration from these two things and create a NEW CHARACTER:
+
+Concept 1: ${desc1}
+Concept 2: ${desc2}
+
+${stylePreset.suffix}
+
+Create ONE single character that combines elements from both. Give it a face, eyes, and personality. Make it a 3D rendered creature/character, NOT a realistic object.`;
+    } else {
+      // Für andere Stile: Normale Kombination
+      mergePrompt = `Create a creative combination that merges these two concepts into one cohesive image:
 
 Image 1: ${desc1}
 Image 2: ${desc2}
@@ -105,6 +119,7 @@ Image 2: ${desc2}
 Combine the key features, colors, and style elements from both descriptions into a single, harmonious image. Be creative and fun!
 
 Style: ${stylePreset.suffix}`;
+    }
     
     console.log('✨ Generiere kombiniertes Bild mit DALL-E 3...');
     
