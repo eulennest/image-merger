@@ -295,7 +295,7 @@ GUT: "Ein neongrüner Vogel aus flüssigem Metall mit leuchtenden Augen"
 GUT: "Eine schwebende Dose mit Federflügeln und hypnotischem Blick"`;
 
       const conceptResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: gptConceptPrompt },
           { role: 'user', content: `Beschreibung 1: ${desc1}\n\nBeschreibung 2: ${desc2}\n\nErstelle EIN kreatives Konzept (max 15 Wörter):` }
