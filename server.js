@@ -387,7 +387,7 @@ ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
 
 // Admin routes
 app.get('/admin/logs', basicAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 app.get('/admin/logs/data', basicAuth, (req, res) => {
