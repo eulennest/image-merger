@@ -7,6 +7,11 @@ const fs = require('fs');
 const crypto = require('crypto');
 const https = require('https');
 const OpenAI = require('openai');
+const Replicate = require('replicate');
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_KEY
+});
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -162,6 +167,11 @@ const STYLE_PRESETS = {
   brainrot: {
     name: 'Brainrot',
     suffix: 'Transform into ONE SINGLE cursed 3D creature. Style: Italy brainrot memes, uncanny valley, slightly wrong proportions, bulging eyes, unsettling smile, oversaturated colors. NOT cute - creepy. ONE creature only, centered, merged hybrid.'
+  },
+  flux_monster: {
+    name: 'Flux Monster (experimental)',
+    suffix: 'cursed 3D creature, uncanny valley, bulging eyes, unsettling, oversaturated colors, brainrot meme style, single creature centered',
+    useFlux: true
   }
 };
 
