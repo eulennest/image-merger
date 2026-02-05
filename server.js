@@ -161,7 +161,7 @@ const STYLE_PRESETS = {
   },
   brainrot: {
     name: 'Brainrot',
-    suffix: 'IMPORTANT: Transform this into CURSED anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: oversized bulging eyes (slightly wrong), uncanny facial expressions, weird proportions, smooth 3D render but deliberately unsettling, oversaturated colors. Think "Cheesed to meet you" but make it CREEPY - not cute. Characters should look slightly wrong, unnerving, with that signature brainrot energy. Dead stare, too-wide smile, body horror vibes. Ignore realism - make it look like a fever dream that went too far.'
+    suffix: 'Transform into ONE SINGLE cursed 3D creature. Style: Italy brainrot memes, uncanny valley, slightly wrong proportions, bulging eyes, unsettling smile, oversaturated colors. NOT cute - creepy. ONE creature only, centered, merged hybrid.'
   }
 };
 
@@ -282,27 +282,15 @@ BILD 2: ${desc2}`
     let mergePrompt;
     
     if (style === 'brainrot' || style === 'cute_monster') {
-      // KOMPLETT NEUER PROMPT: Die Bilder sind nur Inspiration
-      mergePrompt = `MONSTER GENERATOR
+      // Simpler Ansatz wie Spielzeug - funktioniert besser
+      mergePrompt = `Combine these two concepts into ONE single hybrid creature:
 
-You are creating a BRAND NEW creature. The inputs below are just INSPIRATION - do NOT recreate them.
+A: ${concept1}
+B: ${concept2}
 
-INSPIRATION A: ${concept1}
-INSPIRATION B: ${concept2}
+Create ONE creature that merges features from both. Single body, single head, centered composition.
 
-YOUR TASK:
-Invent ONE completely new monster/creature that captures the ESSENCE and VIBE of both inspirations.
-- DO NOT show the original objects
-- DO NOT put two things side by side  
-- CREATE something NEW that FEELS like a fusion of both vibes
-- The creature should have ONE body, ONE head, and be a single unified being
-- Be CREATIVE - this is art, not a copy machine
-
-${stylePreset.suffix}
-
-Think of it like mixing two paint colors - you get a NEW color, not two blobs.
-
-OUTPUT: A single 3D rendered creature portrait, centered, one unified being.`;
+${stylePreset.suffix}`;
     } else {
       // Für andere Stile: Normale Kombination
       mergePrompt = `Create a creative combination that merges these two concepts into one cohesive image:
