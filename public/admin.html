@@ -401,7 +401,7 @@
             try {
                 const response = await fetch(url);
                 currentMetaData = await response.json();
-                document.getElementById('metaJsonDisplay').textContent = JSON.stringify(currentMetaData, null, 2);
+                document.getElementById('metaJsonDisplay').innerHTML = syntaxHighlight(currentMetaData);
             } catch (e) {
                 document.getElementById('metaJsonDisplay').textContent = 'Fehler beim Laden: ' + e.message;
             }
@@ -417,6 +417,28 @@
             a.href = currentMetaUrl;
             a.download = currentMetaUrl.split('/').pop();
             a.click();
+        }
+
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') {
+                json = JSON.stringify(json, null, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\u[a-zA-Z0-9]{4}|\[^u]|[^\"])*"(\s*:)?|(true|false|null)|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
         }
     </script>
 </body>
