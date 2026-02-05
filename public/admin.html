@@ -308,7 +308,7 @@
                     tr.innerHTML = `
                         <td>${dateStr}</td>
                         <td>${ipHtml}</td>
-                        <td>${log.style || 'realistic'}</td>
+                        <td>${log.style || 'realistic'}<br><small style="color: #888;">${log.meta?.modelName || ''}</small></td>
                         <td>${source1Html}</td>
                         <td>${source2Html}</td>
                         <td>${resultHtml}</td>
