@@ -226,30 +226,83 @@ app.post('/api/merge', async (req, res) => {
     const desc1 = analysis1.choices[0].message.content;
     const desc2 = analysis2.choices[0].message.content;
     
-    console.log('📝 Bild 1:', desc1);
-    console.log('📝 Bild 2:', desc2);
+    console.log('📝 Bild 1 (raw):', desc1);
+    console.log('📝 Bild 2 (raw):', desc2);
     
-    // Kombinations-Prompt generieren mit Style-spezifischer Struktur
+    // Für Brainrot/Monster: Beschreibungen abstrahieren
+    let concept1 = desc1;
+    let concept2 = desc2;
+    
+    if (style === 'brainrot' || style === 'cute_monster') {
+      console.log('🧠 Abstrahiere Konzepte für Monster-Fusion...');
+      
+      const abstractionResponse = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Du extrahierst abstrakte Konzepte aus Bildbeschreibungen für Monster-Design.
+Antworte NUR im Format:
+KONZEPT_1: [3-5 abstrakte Keywords: Form, Textur, Farbe, Stimmung, Eigenschaft]
+KONZEPT_2: [3-5 abstrakte Keywords]
+
+Beispiel Input: "Ein roter Apfel auf einem Holztisch"
+Beispiel Output: KONZEPT_1: rund, glänzend, rot, saftig, organisch
+
+Keine ganzen Sätze. Nur Keywords.`
+          },
+          {
+            role: 'user',
+            content: `Extrahiere abstrakte Konzepte:
+
+BILD 1: ${desc1}
+
+BILD 2: ${desc2}`
+          }
+        ],
+        max_tokens: 100
+      });
+      
+      const abstracted = abstractionResponse.choices[0].message.content;
+      console.log('🎯 Abstrahiert:', abstracted);
+      
+      // Parse die Konzepte
+      const lines = abstracted.split('\\n');
+      const match1 = abstracted.match(/KONZEPT_1:\\s*(.+)/i);
+      const match2 = abstracted.match(/KONZEPT_2:\\s*(.+)/i);
+      
+      concept1 = match1 ? match1[1].trim() : desc1;
+      concept2 = match2 ? match2[1].trim() : desc2;
+      
+      console.log('💡 Konzept 1:', concept1);
+      console.log('💡 Konzept 2:', concept2);
+    }
+    
+    // Kombinations-Prompt generieren
     let mergePrompt;
     
     if (style === 'brainrot' || style === 'cute_monster') {
-      // Für Brainrot: EIN fusioniertes Monster, KEINE zwei Objekte
-      mergePrompt = `CRITICAL: Create EXACTLY ONE SINGLE MERGED CREATURE. NOT two objects side by side. ONE FUSED BEING.
+      // KOMPLETT NEUER PROMPT: Die Bilder sind nur Inspiration
+      mergePrompt = `MONSTER GENERATOR
 
-Extract key features from both concepts:
-Thing A: ${desc1}
-Thing B: ${desc2}
+You are creating a BRAND NEW creature. The inputs below are just INSPIRATION - do NOT recreate them.
 
-FUSION RULES:
-- Take body parts from BOTH and MERGE them into ONE creature
-- One head (can have features from both)
-- One body (hybrid of both)
-- The creature IS both things fused together, not two things next to each other
-- Like a genetic hybrid or chimera - ONE organism
+INSPIRATION A: ${concept1}
+INSPIRATION B: ${concept2}
+
+YOUR TASK:
+Invent ONE completely new monster/creature that captures the ESSENCE and VIBE of both inspirations.
+- DO NOT show the original objects
+- DO NOT put two things side by side  
+- CREATE something NEW that FEELS like a fusion of both vibes
+- The creature should have ONE body, ONE head, and be a single unified being
+- Be CREATIVE - this is art, not a copy machine
 
 ${stylePreset.suffix}
 
-OUTPUT: A single 3D rendered creature that IS the fusion of both concepts. If you show two separate objects, you have FAILED.`;
+Think of it like mixing two paint colors - you get a NEW color, not two blobs.
+
+OUTPUT: A single 3D rendered creature portrait, centered, one unified being.`;
     } else {
       // Für andere Stile: Normale Kombination
       mergePrompt = `Create a creative combination that merges these two concepts into one cohesive image:
@@ -261,8 +314,9 @@ Combine the key features, colors, and style elements from both descriptions into
 
 Style: ${stylePreset.suffix}`;
     }
-    
+
     console.log('✨ Generiere kombiniertes Bild mit DALL-E 3...');
+
     
     // Mit DALL-E 3 kombiniertes Bild generieren
     const imageResponse = await openai.images.generate({
