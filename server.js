@@ -10,8 +10,8 @@ const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3100;
-const LOG_FILE = path.join(__dirname, 'merge-logs.json');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const LOG_FILE = path.join(__dirname, 'appdata', 'merge-logs.json');
+const UPLOADS_DIR = path.join(__dirname, 'appdata', 'uploads');
 
 // OpenAI API Key aus Environment
 const openai = new OpenAI({

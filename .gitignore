@@ -4,3 +4,6 @@ node_modules/
 .DS_Store
 merge-logs.json
 uploads/
+
+# App runtime data (logs, uploads, DBs)
+appdata/
