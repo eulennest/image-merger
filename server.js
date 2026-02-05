@@ -328,12 +328,12 @@ BILD 2: ${desc2}`
       // Monster/Fusion: Ein vereintes Konzept
       mergePrompt = `Create a creature based on this concept:
 
-A single being that is ${concept1} combined with ${concept2}. One unified creature, centered composition.`;
+A single creature: ${concept1}, ${concept2}. One unified creature, centered composition.`;
     } else {
       // Andere Stile: Auch als ein Konzept
       mergePrompt = `Create an image based on this concept:
 
-${desc1} merged with ${desc2}. One unified image, creative fusion of both elements.`;
+${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
     }
 
     console.log('✨ Generiere kombiniertes Bild mit DALL-E 3...');
