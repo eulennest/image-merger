@@ -225,6 +225,77 @@
         .error.show {
             display: block;
         }
+    
+        /* Meta Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: auto;
+            position: relative;
+            margin: 20px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .meta-json {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 50vh;
+            overflow: auto;
+        }
+        .meta-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .meta-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .meta-btn-download {
+            background: #667eea;
+            color: white;
+        }
+        .meta-btn-close {
+            background: #e0e0e0;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -302,6 +373,9 @@
         <div class="result-section" id="result">
             <h2>✨ Dein kombiniertes Bild:</h2>
             <img id="resultImage">
+            <div style="margin-top: 15px;">
+                <button class="small-btn" onclick="showMetaModal(lastMeta)" id="metaBtn" style="display:none;">📋 Meta anzeigen</button>
+            </div>
         </div>
     </div>
     
@@ -316,6 +390,7 @@
         let image1 = null;
         let image2 = null;
         let currentStream = null;
+        let lastMeta = null;
         let currentImageNumber = null;
         
         document.getElementById('file1').addEventListener('change', (e) => handleImageUpload(e, 1));
@@ -552,6 +627,8 @@
                 
                 document.getElementById('resultImage').src = data.imageUrl;
                 result.classList.add('show');
+                lastMeta = data.meta;
+                document.getElementById('metaBtn').style.display = 'inline-block';
             } catch (err) {
                 error.textContent = '❌ Oops! Etwas ist schiefgelaufen. Versuche es nochmal!';
                 error.classList.add('show');
@@ -560,6 +637,49 @@
                 btn.disabled = false;
             }
         }
+    </script>
+
+    <!-- Meta Modal -->
+    <div class="modal-overlay" id="metaModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeMetaModal()">&times;</span>
+            <h2 style="color: #667eea; margin-bottom: 15px;">📋 Meta-Daten</h2>
+            <pre class="meta-json" id="metaJson"></pre>
+            <div class="meta-buttons">
+                <button class="meta-btn meta-btn-download" onclick="downloadMeta()">⬇️ Download JSON</button>
+                <button class="meta-btn meta-btn-close" onclick="closeMetaModal()">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMeta = null;
+        
+        function showMetaModal(meta) {
+            currentMeta = meta;
+            document.getElementById('metaJson').textContent = JSON.stringify(meta, null, 2);
+            document.getElementById('metaModal').classList.add('show');
+        }
+        
+        function closeMetaModal() {
+            document.getElementById('metaModal').classList.remove('show');
+        }
+        
+        function downloadMeta() {
+            if (!currentMeta) return;
+            const blob = new Blob([JSON.stringify(currentMeta, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'merge-meta-' + (currentMeta.sessionId || Date.now()) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Close modal on overlay click
+        document.getElementById('metaModal').addEventListener('click', function(e) {
+            if (e.target === this) closeMetaModal();
+        });
     </script>
 </body>
 </html>

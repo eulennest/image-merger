@@ -275,50 +275,38 @@ app.post('/api/merge', async (req, res) => {
     // Für Brainrot/Monster: Beschreibungen abstrahieren
     let concept1 = desc1;
     let concept2 = desc2;
+    let gptConceptPrompt = "";
+    let gptConceptSystemPrompt = '';
+    let gptConceptUserPrompt = '';
     
-    if (style === 'brainrot' || style === 'cute_monster') {
-      console.log('🧠 Abstrahiere Konzepte für Monster-Fusion...');
+    if (style === 'brainrot' || style === 'cute_monster' || style === 'fusion') {
+      console.log('🧠 Erstelle kreatives Konzept...');
       
-      const abstractionResponse = await openai.chat.completions.create({
+      gptConceptPrompt = `Du bist ein kreativer Monster-Designer. Erschaffe EIN NEUES Kreatur-Konzept inspiriert von beiden Beschreibungen.
+
+WICHTIG:
+- Erschaffe etwas NEUES, nicht "Objekt A mit Körper von B"
+- Sei abstrakt und kreativ - lass dich INSPIRIEREN
+- Variiere: mal dominiert A, mal B, mal was ganz Neues
+- EIN kurzer Satz, max 15 Wörter
+
+SCHLECHT: "Eine Eule mit Dosenkörper"
+GUT: "Ein neongrüner Vogel aus flüssigem Metall mit leuchtenden Augen"
+GUT: "Eine schwebende Dose mit Federflügeln und hypnotischem Blick"`;
+
+      const conceptResponse = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: `Du extrahierst abstrakte Konzepte aus Bildbeschreibungen für Monster-Design.
-Antworte NUR im Format:
-KONZEPT_1: [3-5 abstrakte Keywords: Form, Textur, Farbe, Stimmung, Eigenschaft]
-KONZEPT_2: [3-5 abstrakte Keywords]
-
-Beispiel Input: "Ein roter Apfel auf einem Holztisch"
-Beispiel Output: KONZEPT_1: rund, glänzend, rot, saftig, organisch
-
-Keine ganzen Sätze. Nur Keywords.`
-          },
-          {
-            role: 'user',
-            content: `Extrahiere abstrakte Konzepte:
-
-BILD 1: ${desc1}
-
-BILD 2: ${desc2}`
-          }
+          { role: 'system', content: gptConceptPrompt },
+          { role: 'user', content: `Beschreibung 1: ${desc1}\n\nBeschreibung 2: ${desc2}\n\nErstelle EIN kreatives Konzept (max 15 Wörter):` }
         ],
-        max_tokens: 100
+        max_tokens: 60,
+        temperature: 1.0
       });
       
-      const abstracted = abstractionResponse.choices[0].message.content;
-      console.log('🎯 Abstrahiert:', abstracted);
-      
-      // Parse die Konzepte
-      const lines = abstracted.split('\\n');
-      const match1 = abstracted.match(/KONZEPT_1:\\s*(.+)/i);
-      const match2 = abstracted.match(/KONZEPT_2:\\s*(.+)/i);
-      
-      concept1 = match1 ? match1[1].trim() : desc1;
-      concept2 = match2 ? match2[1].trim() : desc2;
-      
-      console.log('💡 Konzept 1:', concept1);
-      console.log('💡 Konzept 2:', concept2);
+      concept1 = conceptResponse.choices[0].message.content.trim().replace(/^["']|["']$/g, "");
+      concept2 = "";
+      console.log('💡 Kreatives Konzept:', concept1);
     }
     
     // Kombinations-Prompt generieren - als EIN vereintes Konzept
@@ -328,7 +316,7 @@ BILD 2: ${desc2}`
       // Monster/Fusion: Ein vereintes Konzept
       mergePrompt = `Create a creature based on this concept:
 
-A single creature: ${concept1}, ${concept2}. One unified creature, centered composition.`;
+A single creature: ${concept1}. One unified creature, centered composition.`;
     } else {
       // Andere Stile: Auch als ein Konzept
       mergePrompt = `Create an image based on this concept:
@@ -357,9 +345,17 @@ ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const savedData = await saveImageSet(clientIp, style, image1, image2, imageUrl, {
       userAgent: userAgent,
+      model: model,
+      modelName: modelPreset.name,
+      provider: modelPreset.provider,
+      replicateModel: modelPreset.model || null,
+      styleName: stylePreset.name,
       description1: desc1,
       description2: desc2,
-      prompt: mergePrompt
+      gptConceptPrompt: gptConceptPrompt || null,
+      creativeConcept: concept1 !== desc1 ? concept1 : null,
+      imagePrompt: mergePrompt,
+      stylePromptSuffix: stylePreset.suffix
     });
     
     // Log the merge
@@ -367,9 +363,20 @@ ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
     
     res.json({
       imageUrl: imageUrl,
-      description1: desc1,
-      description2: desc2,
-      prompt: mergePrompt
+      meta: {
+        style: style,
+        styleName: stylePreset.name,
+        model: model,
+        modelName: modelPreset.name,
+        provider: modelPreset.provider,
+        description1: desc1,
+        description2: desc2,
+        creativeConcept: concept1 !== desc1 ? concept1 : null,
+        gptConceptPrompt: gptConceptPrompt || null,
+        imagePrompt: mergePrompt,
+        stylePromptSuffix: stylePreset.suffix,
+        sessionId: savedData.sessionId
+      }
     });
     
   } catch (error) {
