@@ -321,29 +321,19 @@ BILD 2: ${desc2}`
       console.log('💡 Konzept 2:', concept2);
     }
     
-    // Kombinations-Prompt generieren
+    // Kombinations-Prompt generieren - als EIN vereintes Konzept
     let mergePrompt;
     
-    if (style === 'brainrot' || style === 'cute_monster') {
-      // Simpler Ansatz wie Spielzeug - funktioniert besser
-      mergePrompt = `Combine these two concepts into ONE single hybrid creature:
+    if (style === 'brainrot' || style === 'cute_monster' || style === 'fusion') {
+      // Monster/Fusion: Ein vereintes Konzept
+      mergePrompt = `Create a creature based on this concept:
 
-A: ${concept1}
-B: ${concept2}
-
-Create ONE creature that merges features from both. Single body, single head, centered composition.
-
-${stylePreset.suffix}`;
+A single being that is ${concept1} combined with ${concept2}. One unified creature, centered composition.`;
     } else {
-      // Für andere Stile: Normale Kombination
-      mergePrompt = `Create a creative combination that merges these two concepts into one cohesive image:
+      // Andere Stile: Auch als ein Konzept
+      mergePrompt = `Create an image based on this concept:
 
-Image 1: ${desc1}
-Image 2: ${desc2}
-
-Combine the key features, colors, and style elements from both descriptions into a single, harmonious image. Be creative and fun!
-
-Style: ${stylePreset.suffix}`;
+${desc1} merged with ${desc2}. One unified image, creative fusion of both elements.`;
     }
 
     console.log('✨ Generiere kombiniertes Bild mit DALL-E 3...');
