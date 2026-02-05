@@ -233,23 +233,15 @@ app.post('/api/merge', async (req, res) => {
     let mergePrompt;
     
     if (style === 'brainrot' || style === 'cute_monster') {
-      // Für Brainrot: EIN fusioniertes Monster, KEINE zwei Objekte
-      mergePrompt = `CRITICAL: Create EXACTLY ONE SINGLE MERGED CREATURE. NOT two objects side by side. ONE FUSED BEING.
+      // Für Brainrot: Ignoriere die realistischen Beschreibungen, mache Monster
+      mergePrompt = `Take inspiration from these two things and create a NEW CHARACTER:
 
-Extract key features from both concepts:
-Thing A: ${desc1}
-Thing B: ${desc2}
-
-FUSION RULES:
-- Take body parts from BOTH and MERGE them into ONE creature
-- One head (can have features from both)
-- One body (hybrid of both)
-- The creature IS both things fused together, not two things next to each other
-- Like a genetic hybrid or chimera - ONE organism
+Concept 1: ${desc1}
+Concept 2: ${desc2}
 
 ${stylePreset.suffix}
 
-OUTPUT: A single 3D rendered creature that IS the fusion of both concepts. If you show two separate objects, you have FAILED.`;
+Create ONE single character that combines elements from both. Give it a face, eyes, and personality. Make it a 3D rendered creature/character, NOT a realistic object.`;
     } else {
       // Für andere Stile: Normale Kombination
       mergePrompt = `Create a creative combination that merges these two concepts into one cohesive image:
