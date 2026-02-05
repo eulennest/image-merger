@@ -269,21 +269,11 @@
                 <option value="realistic">📸 Realistisch</option>
                 <option value="toy">🧸 Spielzeug</option>
                 <option value="cute_monster">🥰 Niedliche Monster</option>
-                <option value="brainrot">💀 Brainrot (cursed)</option>
-                <option value="fusion">🔀 Kreatur-Fusion</option>
-            </select>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; text-align: center; font-size: 1.2em; margin-bottom: 10px; color: #667eea; font-weight: bold;">
-                🤖 KI-Modell:
-            </label>
-            <select id="modelSelect" style="width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #667eea; border-radius: 10px; font-family: 'Comic Sans MS', cursive;">
-                <option value="dalle3">🎨 DALL-E 3</option>
-                <option value="flux_schnell">⚡ Flux Schnell</option>
+                <option value="brainrot">💀 Brainrot (DALL-E)</option>
+                <option value="flux_monster">⚡ Flux Schnell</option>
                 <option value="flux_pro">🔥 Flux Pro (HQ)</option>
                 <option value="sdxl_lightning">⚡ SDXL Lightning</option>
-                <option value="playground">🎮 Playground v2.5</option>
+                <option value="playground">🎨 Playground v2.5</option>
                 <option value="imagen">🌟 Google Imagen 4</option>
             </select>
         </div>
@@ -523,7 +513,6 @@
             const error = document.getElementById('error');
             const btn = document.getElementById('mergeBtn');
             const style = document.getElementById('styleSelect').value;
-            const model = document.getElementById('modelSelect').value;
             
             loading.classList.add('show');
             result.classList.remove('show');
@@ -539,8 +528,7 @@
                     body: JSON.stringify({
                         image1: image1,
                         image2: image2,
-                        style: style,
-                        model: model
+                        style: style
                     })
                 });
                 

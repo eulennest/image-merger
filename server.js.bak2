@@ -162,64 +162,51 @@ const STYLE_PRESETS = {
   },
   cute_monster: {
     name: 'Niedliche Monster',
-    suffix: 'Transform into cute/adorable anthropomorphic 3D character, giant googly eyes, exaggerated happy expressions, chubby rounded body, smooth 3D render, vibrant pastel colors, Pixar style.'
+    suffix: 'IMPORTANT: Completely transform this into cute/adorable anthropomorphic 3D characters in the Italy brainrot meme style. MUST HAVE: giant googly eyes, exaggerated happy facial expressions, chubby rounded bodies, smooth 3D render aesthetic, vibrant pastel colors. Think "Cheesed to meet you" TikTok memes - turn EVERYTHING into living characters with personality, faces, and that signature unsettling cuteness. Ignore realism completely - make it look like a Pixar fever dream crossed with wholesome memes.'
   },
   brainrot: {
-    name: 'Brainrot (cursed)',
+    name: 'Brainrot',
     suffix: 'Transform into ONE SINGLE cursed 3D creature. Style: Italy brainrot memes, uncanny valley, slightly wrong proportions, bulging eyes, unsettling smile, oversaturated colors. NOT cute - creepy. ONE creature only, centered, merged hybrid.'
   },
-  fusion: {
-    name: 'Kreatur-Fusion',
-    suffix: 'Create ONE single hybrid creature that merges both concepts into a unified being. Single body, single head, genetic chimera style, centered composition.'
-  }
-};
-
-// Model Presets - separate from styles
-const MODEL_PRESETS = {
-  dalle3: {
-    name: 'DALL-E 3',
-    provider: 'openai'
-  },
-  flux_schnell: {
+  flux_monster: {
     name: 'Flux Schnell',
-    provider: 'replicate',
-    model: 'black-forest-labs/flux-schnell'
+    suffix: 'cursed 3D creature, uncanny valley, bulging eyes, unsettling, oversaturated colors, brainrot meme style, single creature centered',
+    useReplicate: 'black-forest-labs/flux-schnell'
   },
   flux_pro: {
     name: 'Flux Pro (HQ)',
-    provider: 'replicate',
-    model: 'black-forest-labs/flux-1.1-pro'
+    suffix: 'ONE single hybrid creature, 3D render, cursed brainrot style, uncanny valley, merged chimera, centered portrait',
+    useReplicate: 'black-forest-labs/flux-1.1-pro'
   },
   sdxl_lightning: {
-    name: 'SDXL Lightning',
-    provider: 'replicate',
-    model: 'lucataco/sdxl-lightning-4step'
+    name: 'SDXL Lightning (fast)',
+    suffix: 'single mutant creature, 3D rendered, creepy cute, fused hybrid monster, centered, one body',
+    useReplicate: 'lucataco/sdxl-lightning-4step'
   },
   playground: {
     name: 'Playground v2.5',
-    provider: 'replicate',
-    model: 'playgroundai/playground-v2.5-1024px-aesthetic'
+    suffix: 'ONE creature design, character art, hybrid monster fusion, stylized 3D, single centered character',
+    useReplicate: 'playgroundai/playground-v2.5-1024px-aesthetic'
   },
   imagen: {
     name: 'Google Imagen 4',
-    provider: 'replicate',
-    model: 'google/imagen-4-fast'
+    suffix: 'single hybrid creature combining both concepts into one being, 3D rendered monster, centered composition',
+    useReplicate: 'google/imagen-4-fast'
   }
 };
 
 // API Endpoint für Bild-Kombination
 app.post('/api/merge', async (req, res) => {
   try {
-    const { image1, image2, style = 'realistic', model = 'dalle3' } = req.body;
+    const { image1, image2, style = 'realistic' } = req.body;
     
     if (!image1 || !image2) {
       return res.status(400).json({ error: 'Beide Bilder erforderlich' });
     }
     
     const stylePreset = STYLE_PRESETS[style] || STYLE_PRESETS.realistic;
-    const modelPreset = MODEL_PRESETS[model] || MODEL_PRESETS.dalle3;
-    console.log(`🎨 Stil: ${stylePreset.name} | 🤖 Model: ${modelPreset.name}`);
-        
+    console.log(`🎨 Stil: ${stylePreset.name}`);
+    
     console.log('🎨 Analysiere Bild 1 mit GPT-4 Vision...');
     
     // Bild 1 analysieren
