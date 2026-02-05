@@ -19,7 +19,7 @@ const openai = new OpenAI({
 });
 
 app.use(bodyParser.json({ limit: '50mb' }));
-app.use(express.static('.'));
+app.use(express.static('public'));
 
 // Basic Auth Middleware
 function basicAuth(req, res, next) {
