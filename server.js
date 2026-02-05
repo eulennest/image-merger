@@ -169,9 +169,29 @@ const STYLE_PRESETS = {
     suffix: 'Transform into ONE SINGLE cursed 3D creature. Style: Italy brainrot memes, uncanny valley, slightly wrong proportions, bulging eyes, unsettling smile, oversaturated colors. NOT cute - creepy. ONE creature only, centered, merged hybrid.'
   },
   flux_monster: {
-    name: 'Flux Monster (experimental)',
+    name: 'Flux Schnell',
     suffix: 'cursed 3D creature, uncanny valley, bulging eyes, unsettling, oversaturated colors, brainrot meme style, single creature centered',
-    useFlux: true
+    useReplicate: 'black-forest-labs/flux-schnell'
+  },
+  flux_pro: {
+    name: 'Flux Pro (HQ)',
+    suffix: 'ONE single hybrid creature, 3D render, cursed brainrot style, uncanny valley, merged chimera, centered portrait',
+    useReplicate: 'black-forest-labs/flux-1.1-pro'
+  },
+  sdxl_lightning: {
+    name: 'SDXL Lightning (fast)',
+    suffix: 'single mutant creature, 3D rendered, creepy cute, fused hybrid monster, centered, one body',
+    useReplicate: 'lucataco/sdxl-lightning-4step'
+  },
+  playground: {
+    name: 'Playground v2.5',
+    suffix: 'ONE creature design, character art, hybrid monster fusion, stylized 3D, single centered character',
+    useReplicate: 'playgroundai/playground-v2.5-1024px-aesthetic'
+  },
+  imagen: {
+    name: 'Google Imagen 4',
+    suffix: 'single hybrid creature combining both concepts into one being, 3D rendered monster, centered composition',
+    useReplicate: 'google/imagen-4-fast'
   }
 };
 
