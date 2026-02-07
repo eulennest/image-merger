@@ -396,17 +396,28 @@
         // 🎨 LocalStorage Persistence für Dropdowns
         function initializeDropdownPersistence() {
             const styleSelect = document.getElementById('styleSelect');
+            const modelSelect = document.getElementById('modelSelect');
             
-            // Beim Laden: Letzte Auswahl wiederherstellen
+            // 🎨 STYLE DROPDOWN
             const savedStyle = localStorage.getItem('imagemerger_style');
             if (savedStyle && Array.from(styleSelect.options).find(opt => opt.value === savedStyle)) {
                 styleSelect.value = savedStyle;
             }
             
-            // Beim Ändern: Speichern
             styleSelect.addEventListener('change', () => {
                 localStorage.setItem('imagemerger_style', styleSelect.value);
                 console.log('✅ Stil gespeichert:', styleSelect.value);
+            });
+            
+            // 🤖 MODEL DROPDOWN
+            const savedModel = localStorage.getItem('imagemerger_model');
+            if (savedModel && Array.from(modelSelect.options).find(opt => opt.value === savedModel)) {
+                modelSelect.value = savedModel;
+            }
+            
+            modelSelect.addEventListener('change', () => {
+                localStorage.setItem('imagemerger_model', modelSelect.value);
+                console.log('✅ Modell gespeichert:', modelSelect.value);
             });
         }
         
