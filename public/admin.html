@@ -179,14 +179,110 @@
         .json-number { color: #b5cea8; }
         .json-boolean { color: #569cd6; font-style: italic; }
         .json-null { color: #569cd6; font-style: italic; }
+        
+        /* 🎨 Gallery Styles */
+        .tab-content {
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .gallery-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .gallery-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .gallery-card-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        .gallery-card-info {
+            padding: 15px;
+            background: white;
+        }
+        .gallery-card-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .gallery-card-style {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .gallery-card-time {
+            font-size: 0.85em;
+            color: #999;
+        }
+        .gallery-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .gallery-modal.show {
+            display: flex;
+        }
+        .gallery-modal-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow: auto;
+            background: rgba(0,0,0,0.8);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .gallery-modal-image {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        .gallery-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+            z-index: 10000;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔒 Admin Logs - Bild-Kombinator</h1>
         
-        <button class="refresh-btn" onclick="loadLogs()">🔄 Aktualisieren</button>
+        <button class="refresh-btn" onclick="loadLogs(); loadGallery();">🔄 Aktualisieren</button>
         
+        <!-- 🎨 Tabs -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #667eea;">
+            <button class="tab-btn active" onclick="switchTab('logs')" style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid #667eea; cursor: pointer; font-weight: bold; color: #667eea;">📊 Logs</button>
+            <button class="tab-btn" onclick="switchTab('gallery')" style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: bold; color: #999;">🖼️ Galerie</button>
+        </div>
+        
+        <!-- 📊 LOGS TAB -->
+        <div id="logs-tab" class="tab-content active">
         <div class="stats">
             <div class="stat-box">
                 <h3 id="totalCount">-</h3>
@@ -219,6 +315,14 @@
                 <tr><td colspan="8">Lade Logs...</td></tr>
             </tbody>
         </table>
+        </div><!-- end logs-tab -->
+        
+        <!-- 🎨 GALLERY TAB -->
+        <div id="gallery-tab" class="tab-content" style="display: none;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
+                <div id="galleryContainer">Lade Galerie...</div>
+            </div>
+        </div><!-- end gallery-tab -->
     </div>
     
     <div class="modal" id="modal" onclick="this.classList.remove('show')">
@@ -226,6 +330,89 @@
     </div>
     
     <script>
+        // 🎨 Tab Management
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+                el.style.display = 'none';
+            });
+            
+            // Show selected tab
+            const tab = document.getElementById(tabName + '-tab');
+            if (tab) {
+                tab.classList.add('active');
+                tab.style.display = 'block';
+            }
+            
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.borderBottomColor = 'transparent';
+                btn.style.color = '#999';
+            });
+            
+            event.target.classList.add('active');
+            event.target.style.borderBottomColor = '#667eea';
+            event.target.style.color = '#667eea';
+            
+            // Load gallery if switching to gallery
+            if (tabName === 'gallery') {
+                loadGallery();
+            }
+        }
+        
+        // 🖼️ Load Gallery
+        async function loadGallery() {
+            const container = document.getElementById('galleryContainer');
+            try {
+                const response = await fetch('/admin/images/gallery');
+                if (!response.ok) throw new Error('Galerie konnte nicht geladen werden');
+                
+                const images = await response.json();
+                
+                if (images.length === 0) {
+                    container.innerHTML = '<p style="color: #999; grid-column: 1/-1; text-align: center;">Noch keine Bilder generiert</p>';
+                    return;
+                }
+                
+                container.innerHTML = images.map(img => `
+                    <div class="gallery-card" onclick="openGalleryImage('${img.resultImage}', '${img.style}', '${img.model}', '${img.timestamp}')">
+                        <img src="${img.resultImage}" alt="Generated" class="gallery-card-image">
+                        <div class="gallery-card-info">
+                            <div class="gallery-card-style">🎨 ${img.style}</div>
+                            <div class="gallery-card-meta">🤖 ${img.model}</div>
+                            <div class="gallery-card-time">${new Date(img.timestamp).toLocaleString('de-DE')}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Gallery load error:', err);
+                container.innerHTML = '<p style="color: red;">Fehler beim Laden der Galerie: ' + err.message + '</p>';
+            }
+        }
+        
+        // Open gallery image in modal
+        function openGalleryImage(src, style, model, timestamp) {
+            const modal = document.createElement('div');
+            modal.className = 'gallery-modal show';
+            modal.innerHTML = `
+                <span class="gallery-modal-close" onclick="this.parentElement.remove()">×</span>
+                <div class="gallery-modal-content">
+                    <img src="${src}" alt="Generated" class="gallery-modal-image">
+                    <div style="color: white; padding: 20px;">
+                        <h2>${style}</h2>
+                        <p><strong>Modell:</strong> ${model}</p>
+                        <p><strong>Erstellt:</strong> ${new Date(timestamp).toLocaleString('de-DE')}</p>
+                    </div>
+                </div>
+            `;
+            modal.onclick = function(e) {
+                if (e.target === this) this.remove();
+            };
+            document.body.appendChild(modal);
+        }
+        
         async function loadLogs() {
             try {
                 const response = await fetch('/admin/logs/data');

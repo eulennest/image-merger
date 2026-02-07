@@ -412,6 +412,38 @@ app.get('/admin/logs/data', basicAuth, (req, res) => {
   res.json(enrichedLogs);
 });
 
+// 🎨 Image Gallery Endpoint
+app.get('/admin/images/gallery', basicAuth, (req, res) => {
+  const logs = readLogs();
+  
+  const gallery = logs.map(log => {
+    if (log.sessionDir && log.sessionId) {
+      const metaPath = path.join(UPLOADS_DIR, log.sessionDir, `${log.sessionId}_meta.json`);
+      const resultPath = path.join(UPLOADS_DIR, log.sessionDir, `${log.sessionId}_result.jpg`);
+      
+      try {
+        if (fs.existsSync(metaPath) && fs.existsSync(resultPath)) {
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+          return {
+            sessionId: log.sessionId,
+            timestamp: log.timestamp,
+            style: log.style || meta.style,
+            model: meta.model || 'unknown',
+            resultImage: `/admin/uploads/${log.sessionDir}/${log.sessionId}_result.jpg`,
+            source1: `/admin/uploads/${log.sessionDir}/${log.sessionId}_source1.jpg`,
+            source2: `/admin/uploads/${log.sessionDir}/${log.sessionId}_source2.jpg`
+          };
+        }
+      } catch (err) {
+        console.error('Error reading image meta:', err);
+      }
+    }
+    return null;
+  }).filter(item => item !== null);
+  
+  res.json(gallery.reverse()); // Newest first
+});
+
 // Serve uploaded images
 app.use('/admin/uploads', basicAuth, express.static(UPLOADS_DIR));
 
