@@ -393,6 +393,26 @@
         let lastMeta = null;
         let currentImageNumber = null;
         
+        // 🎨 LocalStorage Persistence für Dropdowns
+        function initializeDropdownPersistence() {
+            const styleSelect = document.getElementById('styleSelect');
+            
+            // Beim Laden: Letzte Auswahl wiederherstellen
+            const savedStyle = localStorage.getItem('imagemerger_style');
+            if (savedStyle && Array.from(styleSelect.options).find(opt => opt.value === savedStyle)) {
+                styleSelect.value = savedStyle;
+            }
+            
+            // Beim Ändern: Speichern
+            styleSelect.addEventListener('change', () => {
+                localStorage.setItem('imagemerger_style', styleSelect.value);
+                console.log('✅ Stil gespeichert:', styleSelect.value);
+            });
+        }
+        
+        // Beim DOM ready starten
+        document.addEventListener('DOMContentLoaded', initializeDropdownPersistence);
+        
         document.getElementById('file1').addEventListener('change', (e) => handleImageUpload(e, 1));
         document.getElementById('file2').addEventListener('change', (e) => handleImageUpload(e, 2));
         
