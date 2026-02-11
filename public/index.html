@@ -381,8 +381,11 @@
             content.style.display = 'none';
             uploadBox.classList.add('has-image');
 
-            // Klick zum Zurücksetzen
-            uploadBox.onclick = () => resetImage(imageNumber);
+            // Klick zum Zurücksetzen - auf beide (uploadBox und preview img)
+            const resetHandler = () => resetImage(imageNumber);
+            uploadBox.onclick = resetHandler;
+            preview.onclick = resetHandler;
+            preview.style.cursor = 'pointer';
 
             if (imageNumber === 1) {
                 image1 = dataUrl;
