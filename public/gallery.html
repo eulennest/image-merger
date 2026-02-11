@@ -278,6 +278,13 @@
                 const date = new Date(entry.timestamp);
                 const formattedDate = date.toLocaleDateString('de-DE') + ' ' + date.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
                 
+                // Pfade vom Server konstruieren
+                const sessionDir = date.toISOString().replace(/[:.]/g, '-');
+                const sessionId = entry.sessionId;
+                const source1Url = `/api/uploads/${sessionDir}/${sessionId}_source1.jpg`;
+                const source2Url = `/api/uploads/${sessionDir}/${sessionId}_source2.jpg`;
+                const resultUrl = `/api/uploads/${sessionDir}/${sessionId}_result.jpg`;
+                
                 const item = document.createElement('div');
                 item.className = 'gallery-item';
                 item.innerHTML = `
@@ -287,16 +294,16 @@
                     
                     <div class="gallery-item-images">
                         <div class="label">📥 Quellbilder:</div>
-                        <img src="${entry.source1Url || ''}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3E--%3C/text%3E%3C/svg%3E'" onclick="openModal('${entry.source1Url}')" title="Klick für Vollbild" style="cursor: pointer;">
-                        <img src="${entry.source2Url || ''}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3E--%3C/text%3E%3C/svg%3E'" onclick="openModal('${entry.source2Url}')" title="Klick für Vollbild" style="cursor: pointer;">
+                        <img src="${source1Url}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3E--%3C/text%3E%3C/svg%3E'" onclick="openModal('${source1Url}')" title="Klick für Vollbild" style="cursor: pointer;">
+                        <img src="${source2Url}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3E--%3C/text%3E%3C/svg%3E'" onclick="openModal('${source2Url}')" title="Klick für Vollbild" style="cursor: pointer;">
                     </div>
                     
                     <div class="gallery-item-result">
-                        <img src="${entry.imageUrl}" onclick="openModal('${entry.imageUrl}')" title="Klick für Vollbild">
+                        <img src="${resultUrl}" onclick="openModal('${resultUrl}')" title="Klick für Vollbild">
                         
                         <div class="gallery-item-meta">
-                            <p><strong>Stil:</strong> ${entry.styleName || entry.style}</p>
-                            <p><strong>Modell:</strong> ${entry.modelName || entry.model}</p>
+                            <p><strong>Stil:</strong> ${entry.style}</p>
+                            <p><strong>Modell:</strong> ${entry.model}</p>
                             <button onclick="deleteEntry(${idx})" style="background: #f44336; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%;">🗑️ Löschen</button>
                         </div>
                     </div>

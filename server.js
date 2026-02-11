@@ -375,10 +375,7 @@ ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
         gptConceptPrompt: gptConceptPrompt || null,
         imagePrompt: mergePrompt,
         stylePromptSuffix: stylePreset.suffix,
-        sessionId: savedData.sessionId,
-        sessionDir: savedData.sessionDir,
-        source1Url: `/api/uploads/${savedData.sessionDir}/${savedData.sessionId}_source1.jpg`,
-        source2Url: `/api/uploads/${savedData.sessionDir}/${savedData.sessionId}_source2.jpg`
+        sessionId: savedData.sessionId
       }
     });
     

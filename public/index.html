@@ -610,19 +610,10 @@
         function saveToHistory(imageUrl, meta) {
             const history = JSON.parse(localStorage.getItem('imagemerger_history') || '[]');
             const entry = {
-                id: meta.sessionId || Date.now(),
                 timestamp: new Date().toISOString(),
-                imageUrl: imageUrl,
                 style: meta.style,
-                styleName: meta.styleName,
                 model: meta.model,
-                modelName: meta.modelName,
-                description1: meta.description1,
-                description2: meta.description2,
-                sessionDir: meta.sessionDir,
-                sessionId: meta.sessionId,
-                source1Url: meta.source1Url,
-                source2Url: meta.source2Url
+                sessionId: meta.sessionId
             };
             history.unshift(entry); // Neueste oben
             
@@ -632,7 +623,7 @@
             }
             
             localStorage.setItem('imagemerger_history', JSON.stringify(history));
-            console.log('✅ Generierung gespeichert in History');
+            console.log('✅ Generierung gespeichert in History (minimal data)');
         }
         
         function downloadResultImage() {
