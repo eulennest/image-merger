@@ -7,9 +7,11 @@ const fs = require('fs');
 const crypto = require('crypto');
 const https = require('https');
 const OpenAI = require('openai');
-// const Replicate = require('replicate');
-// Replicate disabled - requires API key
-// const replicate = new Replicate({ auth: process.env.REPLICATE_API_KEY });
+const Replicate = require('replicate');
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_KEY
+});
 
 const app = express();
 const PORT = process.env.PORT || 3100;
@@ -177,13 +179,32 @@ const MODEL_PRESETS = {
   dalle3: {
     name: 'DALL-E 3',
     provider: 'openai'
+  },
+  flux_schnell: {
+    name: 'Flux Schnell',
+    provider: 'replicate',
+    model: 'black-forest-labs/flux-schnell'
+  },
+  flux_pro: {
+    name: 'Flux Pro (HQ)',
+    provider: 'replicate',
+    model: 'black-forest-labs/flux-1.1-pro'
+  },
+  sdxl_lightning: {
+    name: 'SDXL Lightning',
+    provider: 'replicate',
+    model: 'lucataco/sdxl-lightning-4step'
+  },
+  playground: {
+    name: 'Playground v2.5',
+    provider: 'replicate',
+    model: 'playgroundai/playground-v2.5-1024px-aesthetic'
+  },
+  imagen: {
+    name: 'Google Imagen 4',
+    provider: 'replicate',
+    model: 'google/imagen-4-fast'
   }
-  // Replicate models disabled (requires REPLICATE_API_KEY)
-  // flux_schnell: { name: 'Flux Schnell', provider: 'replicate', model: 'black-forest-labs/flux-schnell' },
-  // flux_pro: { name: 'Flux Pro (HQ)', provider: 'replicate', model: 'black-forest-labs/flux-1.1-pro' },
-  // sdxl_lightning: { name: 'SDXL Lightning', provider: 'replicate', model: 'lucataco/sdxl-lightning-4step' },
-  // playground: { name: 'Playground v2.5', provider: 'replicate', model: 'playgroundai/playground-v2.5-1024px-aesthetic' },
-  // imagen: { name: 'Google Imagen 4', provider: 'replicate', model: 'google/imagen-4-fast' }
 };
 
 // API Endpoint für Bild-Kombination
