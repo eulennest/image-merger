@@ -614,9 +614,15 @@
                 timestamp: new Date().toISOString(),
                 imageUrl: imageUrl,
                 style: meta.style,
+                styleName: meta.styleName,
                 model: meta.model,
+                modelName: meta.modelName,
                 description1: meta.description1,
-                description2: meta.description2
+                description2: meta.description2,
+                sessionDir: meta.sessionDir,
+                sessionId: meta.sessionId,
+                source1Url: meta.source1Url,
+                source2Url: meta.source2Url
             };
             history.unshift(entry); // Neueste oben
             

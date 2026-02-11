@@ -375,7 +375,10 @@ ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
         gptConceptPrompt: gptConceptPrompt || null,
         imagePrompt: mergePrompt,
         stylePromptSuffix: stylePreset.suffix,
-        sessionId: savedData.sessionId
+        sessionId: savedData.sessionId,
+        sessionDir: savedData.sessionDir,
+        source1Url: `/api/uploads/${savedData.sessionDir}/${savedData.sessionId}_source1.jpg`,
+        source2Url: `/api/uploads/${savedData.sessionDir}/${savedData.sessionId}_source2.jpg`
       }
     });
     
@@ -446,6 +449,23 @@ app.get('/admin/images/gallery', basicAuth, (req, res) => {
 
 // Serve uploaded images
 app.use('/admin/uploads', basicAuth, express.static(UPLOADS_DIR));
+
+// Public API endpoint for user gallery (source images + results)
+app.get('/api/uploads/:sessionDir/:filename', (req, res) => {
+  const { sessionDir, filename } = req.params;
+  // Sanitize path to prevent directory traversal
+  const safeName = filename.replace(/[^a-zA-Z0-9_.-]/g, '');
+  const filePath = path.join(UPLOADS_DIR, sessionDir, safeName);
+  
+  // Ensure file is within UPLOADS_DIR
+  if (!path.resolve(filePath).startsWith(path.resolve(UPLOADS_DIR))) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  res.sendFile(filePath, (err) => {
+    if (err) res.status(404).json({ error: 'Not found' });
+  });
+});
 
 // Delete entry (with folder)
 app.delete('/admin/logs/:sessionDir/:sessionId', basicAuth, (req, res) => {
