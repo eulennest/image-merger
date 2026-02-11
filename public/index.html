@@ -229,7 +229,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎨 Kombiniermaschine</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 style="margin: 0;">🎨 Kombiniermaschine</h1>
+            <a href="/gallery.html" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; font-weight: bold; text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">📋 Meine Generierungen</a>
+        </div>
 
         <div class="upload-section">
             <div class="upload-box" id="upload1">
@@ -306,12 +309,6 @@
                 <button class="small-btn" onclick="downloadResultImage()" id="downloadBtn">⬇️ Herunterladen</button>
                 <button class="small-btn" onclick="resetForm()" style="margin-left: 10px;">🔄 Neue Kombination</button>
             </div>
-        </div>
-
-        <!-- Meine Generierungen Section -->
-        <div id="historySection" style="margin-top: 40px; display: none;">
-            <h2 style="color: #667eea; margin-bottom: 20px;">📋 Meine Generierungen</h2>
-            <div id="galleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;"></div>
         </div>
     </div>
 
@@ -591,10 +588,10 @@
                 }
 
                 const data = await response.json();
-                
+
                 document.getElementById('resultImage').src = data.imageUrl;
                 result.classList.add('show');
-                
+
                 // Save to history (LocalStorage)
                 saveToHistory(data.imageUrl, data.meta);
             } catch (err) {
@@ -609,7 +606,7 @@
 
     <script>
         // 📋 History Management Functions
-
+        
         function saveToHistory(imageUrl, meta) {
             const history = JSON.parse(localStorage.getItem('imagemerger_history') || '[]');
             const entry = {
@@ -622,71 +619,16 @@
                 description2: meta.description2
             };
             history.unshift(entry); // Neueste oben
-
+            
             // Limit auf 50 Einträge
             if (history.length > 50) {
                 history.splice(50);
             }
-
+            
             localStorage.setItem('imagemerger_history', JSON.stringify(history));
-            loadHistory();
-            showHistorySection();
             console.log('✅ Generierung gespeichert in History');
         }
-
-        function loadHistory() {
-            const history = JSON.parse(localStorage.getItem('imagemerger_history') || '[]');
-            const gallery = document.getElementById('galleryGrid');
-            gallery.innerHTML = '';
-
-            if (history.length === 0) {
-                gallery.innerHTML = '<p style="grid-column: 1/-1; color: #999;">Noch keine Generierungen</p>';
-                return;
-            }
-
-            history.forEach(entry => {
-                const item = document.createElement('div');
-                item.style.cssText = 'cursor: pointer; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.2s;';
-                item.innerHTML = `
-                    <img src="${entry.imageUrl}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
-                    <div style="padding: 8px; background: white;">
-                        <small style="color: #666;">${entry.style} • ${entry.model}</small><br>
-                        <small style="color: #999;">${new Date(entry.timestamp).toLocaleDateString('de-DE')}</small>
-                    </div>
-                `;
-
-                item.addEventListener('click', () => viewHistoryImage(entry));
-                item.addEventListener('mouseenter', () => item.style.transform = 'scale(1.05)');
-                item.addEventListener('mouseleave', () => item.style.transform = 'scale(1)');
-
-                gallery.appendChild(item);
-            });
-        }
-
-        function viewHistoryImage(entry) {
-            // Zeige das Bild in einem Modal
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 9999;';
-            modal.innerHTML = `
-                <div style="position: relative; max-width: 90%; max-height: 90%; overflow: auto;">
-                    <img src="${entry.imageUrl}" style="max-width: 100%; max-height: 80vh; border-radius: 10px;">
-                    <div style="position: absolute; top: 10px; right: 10px; color: white; font-size: 24px; cursor: pointer;" onclick="this.closest('div').parentElement.remove();">✕</div>
-                    <div style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 15px; border-radius: 10px;">
-                        <strong>${entry.style}</strong> • ${entry.model}<br>
-                        <small>${new Date(entry.timestamp).toLocaleString('de-DE')}</small>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) modal.remove();
-            });
-        }
-
-        function showHistorySection() {
-            document.getElementById('historySection').style.display = 'block';
-        }
-
+        
         function downloadResultImage() {
             const img = document.getElementById('resultImage');
             const a = document.createElement('a');
@@ -694,18 +636,13 @@
             a.download = 'kombiniertes-bild-' + Date.now() + '.jpg';
             a.click();
         }
-
+        
         function resetForm() {
             resetImage(1);
             resetImage(2);
             document.getElementById('result').classList.remove('show');
             document.getElementById('error').classList.remove('show');
         }
-
-        // Load history on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            loadHistory();
-        });
     </script>
 </body>
 </html>
