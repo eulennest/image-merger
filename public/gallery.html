@@ -279,7 +279,7 @@
                 const formattedDate = date.toLocaleDateString('de-DE') + ' ' + date.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
                 
                 // Pfade vom Server konstruieren
-                const sessionDir = date.toISOString().replace(/[:.]/g, '-');
+                const sessionDir = entry.sessionDir;
                 const sessionId = entry.sessionId;
                 const source1Url = `/api/uploads/${sessionDir}/${sessionId}_source1.jpg`;
                 const source2Url = `/api/uploads/${sessionDir}/${sessionId}_source2.jpg`;
