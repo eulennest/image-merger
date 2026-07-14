@@ -279,6 +279,14 @@
 
         <div style="margin-bottom: 20px;">
             <label style="display: block; text-align: center; font-size: 1.2em; margin-bottom: 10px; color: #667eea; font-weight: bold;">
+                ✍️ Extra-Anweisung an ChatGPT (optional):
+            </label>
+            <textarea id="extraInstruction" maxlength="1000" placeholder="z.B. stärker wie Holzspielzeug, mehr Pastell, als eine einzige Figur..." style="width: 100%; min-height: 70px; padding: 12px; font-size: 1em; border: 2px solid #667eea; border-radius: 10px; font-family: 'Comic Sans MS', cursive; box-sizing: border-box;"></textarea>
+            <div style="font-size: 0.85em; color: #666; margin-top: 5px; text-align: center;">Wird mit Bildhash + Stil gecached. Modellwechsel nutzt denselben ChatGPT-Merge.</div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; text-align: center; font-size: 1.2em; margin-bottom: 10px; color: #667eea; font-weight: bold;">
                 🤖 KI-Modell:
             </label>
             <select id="modelSelect" style="width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #667eea; border-radius: 10px; font-family: 'Comic Sans MS', cursive;">
@@ -335,6 +343,7 @@
         function initializeDropdownPersistence() {
             const styleSelect = document.getElementById('styleSelect');
             const modelSelect = document.getElementById('modelSelect');
+            const extraInstruction = document.getElementById('extraInstruction');
 
             // 🎨 STYLE DROPDOWN
             const savedStyle = localStorage.getItem('imagemerger_style');
@@ -356,6 +365,14 @@
             modelSelect.addEventListener('change', () => {
                 localStorage.setItem('imagemerger_model', modelSelect.value);
                 console.log('✅ Modell gespeichert:', modelSelect.value);
+            });
+
+            const savedExtraInstruction = localStorage.getItem('imagemerger_extra_instruction');
+            if (savedExtraInstruction) {
+                extraInstruction.value = savedExtraInstruction;
+            }
+            extraInstruction.addEventListener('input', () => {
+                localStorage.setItem('imagemerger_extra_instruction', extraInstruction.value);
             });
         }
 
@@ -571,6 +588,7 @@
             const btn = document.getElementById('mergeBtn');
             const style = document.getElementById('styleSelect').value;
             const model = document.getElementById('modelSelect').value;
+            const extraInstruction = document.getElementById('extraInstruction').value;
 
             loading.classList.add('show');
             result.classList.remove('show');
@@ -587,7 +605,8 @@
                         image1: image1,
                         image2: image2,
                         style: style,
-                        model: model
+                        model: model,
+                        extraInstruction: extraInstruction
                     })
                 });
 
