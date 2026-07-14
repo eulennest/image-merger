@@ -15,8 +15,13 @@ const replicate = new Replicate({
 
 const app = express();
 const PORT = process.env.PORT || 3100;
-const LOG_FILE = path.join(__dirname, 'appdata', 'merge-logs.json');
-const UPLOADS_DIR = path.join(__dirname, 'appdata', 'uploads');
+const APP_DATA_DIR = path.join(__dirname, 'appdata');
+const LOG_FILE = path.join(APP_DATA_DIR, 'merge-logs.json');
+const VISION_CACHE_FILE = path.join(APP_DATA_DIR, 'vision-cache.json');
+const UPLOADS_DIR = path.join(APP_DATA_DIR, 'uploads');
+const VISION_PROMPT = 'Beschreibe dieses Bild in 2-3 prägnanten Sätzen. Fokussiere auf Hauptmerkmale, Farben, Stil und Objekte.';
+const VISION_PROMPT_VERSION = 'image-description-v1';
+const MAX_VISION_CACHE_ENTRIES = 2000;
 
 // OpenAI API Key aus Environment
 const openai = new OpenAI({
@@ -54,7 +59,10 @@ function basicAuth(req, res, next) {
   }
 }
 
-// Create uploads directory
+// Create appdata/uploads directories
+if (!fs.existsSync(APP_DATA_DIR)) {
+  fs.mkdirSync(APP_DATA_DIR, { recursive: true });
+}
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -74,8 +82,8 @@ async function saveImageSet(ip, style, image1Base64, image2Base64, resultUrl, me
   const metaPath = path.join(sessionDir, `${sessionId}_meta.json`);
   
   // Decode base64 and save
-  fs.writeFileSync(image1Path, image1Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-  fs.writeFileSync(image2Path, image2Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+  fs.writeFileSync(image1Path, image1Base64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+  fs.writeFileSync(image2Path, image2Base64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
   
   // Download result image from DALL-E URL
   await downloadImage(resultUrl, resultPath);
@@ -118,6 +126,101 @@ function downloadImage(url, filepath) {
       reject(err);
     });
   });
+}
+
+
+function imagePayloadToBuffer(imagePayload) {
+  const base64 = String(imagePayload || '').replace(/^data:image\/[^;]+;base64,/, '');
+  return Buffer.from(base64, 'base64');
+}
+
+function hashImagePayload(imagePayload) {
+  return crypto.createHash('sha256').update(imagePayloadToBuffer(imagePayload)).digest('hex');
+}
+
+function readVisionCache() {
+  try {
+    if (fs.existsSync(VISION_CACHE_FILE)) {
+      return JSON.parse(fs.readFileSync(VISION_CACHE_FILE, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Error reading vision cache:', err);
+  }
+  return {};
+}
+
+function writeVisionCache(cache) {
+  let current = {};
+  try {
+    if (fs.existsSync(VISION_CACHE_FILE)) {
+      current = JSON.parse(fs.readFileSync(VISION_CACHE_FILE, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Error merging vision cache:', err);
+  }
+
+  const merged = { ...current, ...cache };
+  const entries = Object.entries(merged)
+    .sort((a, b) => new Date(b[1].lastUsedAt || b[1].createdAt || 0) - new Date(a[1].lastUsedAt || a[1].createdAt || 0))
+    .slice(0, MAX_VISION_CACHE_ENTRIES);
+  fs.writeFileSync(VISION_CACHE_FILE, JSON.stringify(Object.fromEntries(entries), null, 2));
+}
+
+async function describeImageWithCache(imagePayload, label) {
+  const imageHash = hashImagePayload(imagePayload);
+  const cacheKey = `${VISION_PROMPT_VERSION}:${imageHash}`;
+  const cache = readVisionCache();
+  const cached = cache[cacheKey];
+
+  if (cached && cached.description) {
+    cached.lastUsedAt = new Date().toISOString();
+    cached.hits = (cached.hits || 0) + 1;
+    writeVisionCache(cache);
+    console.log(`♻️ Vision Cache HIT ${label}: ${imageHash.slice(0, 12)}`);
+    return {
+      description: cached.description,
+      imageHash,
+      cacheHit: true
+    };
+  }
+
+  console.log(`🎨 Analysiere ${label} mit GPT-4 Vision...`);
+  const analysis = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: VISION_PROMPT
+          },
+          {
+            type: 'image_url',
+            image_url: { url: imagePayload }
+          }
+        ]
+      }
+    ],
+    max_tokens: 150
+  });
+
+  const description = analysis.choices[0].message.content;
+  cache[cacheKey] = {
+    imageHash,
+    promptVersion: VISION_PROMPT_VERSION,
+    description,
+    createdAt: new Date().toISOString(),
+    lastUsedAt: new Date().toISOString(),
+    hits: 0
+  };
+  writeVisionCache(cache);
+  console.log(`💾 Vision Cache MISS ${label}: ${imageHash.slice(0, 12)} gespeichert`);
+  return {
+    description,
+    imageHash,
+    cacheHit: false
+  };
 }
 
 // Log merge activity
@@ -313,54 +416,13 @@ app.post('/api/merge', async (req, res) => {
     const modelPreset = MODEL_PRESETS[requestedModel] || MODEL_PRESETS.flux_schnell;
     console.log(`🎨 Stil: ${stylePreset.name} | 🤖 Model: ${modelPreset.name} via Replicate`);
         
-    console.log('🎨 Analysiere Bild 1 mit GPT-4 Vision...');
-    
-    // Bild 1 analysieren
-    const analysis1 = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Beschreibe dieses Bild in 2-3 prägnanten Sätzen. Fokussiere auf Hauptmerkmale, Farben, Stil und Objekte.'
-            },
-            {
-              type: 'image_url',
-              image_url: { url: image1 }
-            }
-          ]
-        }
-      ],
-      max_tokens: 150
-    });
-    
-    console.log('🎨 Analysiere Bild 2 mit GPT-4 Vision...');
-    
-    // Bild 2 analysieren
-    const analysis2 = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Beschreibe dieses Bild in 2-3 prägnanten Sätzen. Fokussiere auf Hauptmerkmale, Farben, Stil und Objekte.'
-            },
-            {
-              type: 'image_url',
-              image_url: { url: image2 }
-            }
-          ]
-        }
-      ],
-      max_tokens: 150
-    });
-    
-    const desc1 = analysis1.choices[0].message.content;
-    const desc2 = analysis2.choices[0].message.content;
+    const [vision1, vision2] = await Promise.all([
+      describeImageWithCache(image1, 'Bild 1'),
+      describeImageWithCache(image2, 'Bild 2')
+    ]);
+
+    const desc1 = vision1.description;
+    const desc2 = vision2.description;
     
     console.log('📝 Bild 1 (raw):', desc1);
     console.log('📝 Bild 2 (raw):', desc2);
@@ -455,6 +517,12 @@ Final output: one unified image where the two inspirations are merged into the s
       styleName: stylePreset.name,
       description1: desc1,
       description2: desc2,
+      image1Hash: vision1.imageHash,
+      image2Hash: vision2.imageHash,
+      visionCache: {
+        image1: vision1.cacheHit ? 'hit' : 'miss',
+        image2: vision2.cacheHit ? 'hit' : 'miss'
+      },
       gptConceptPrompt: gptConceptPrompt || null,
       creativeConcept: concept1 !== desc1 ? concept1 : null,
       imagePrompt: mergePrompt,
@@ -476,6 +544,12 @@ Final output: one unified image where the two inspirations are merged into the s
         replicateModel: modelPreset.model || null,
         description1: desc1,
         description2: desc2,
+        image1Hash: vision1.imageHash,
+        image2Hash: vision2.imageHash,
+        visionCache: {
+          image1: vision1.cacheHit ? 'hit' : 'miss',
+          image2: vision2.cacheHit ? 'hit' : 'miss'
+        },
         creativeConcept: concept1 !== desc1 ? concept1 : null,
         gptConceptPrompt: gptConceptPrompt || null,
         imagePrompt: mergePrompt,
