@@ -176,9 +176,12 @@ const STYLE_PRESETS = {
 
 // Model Presets - separate from styles
 const MODEL_PRESETS = {
+  // Legacy value kept for old browsers with localStorage set to "dalle3".
+  // Image generation must go through Replicate; OpenAI is used only for text/vision descriptions.
   dalle3: {
-    name: 'DALL-E 3',
-    provider: 'openai'
+    name: 'Flux Schnell',
+    provider: 'replicate',
+    model: 'black-forest-labs/flux-schnell'
   },
   flux_schnell: {
     name: 'Flux Schnell',
@@ -207,18 +210,57 @@ const MODEL_PRESETS = {
   }
 };
 
+
+function extractReplicateImageUrl(output) {
+  const first = Array.isArray(output) ? output[0] : output;
+  if (!first) {
+    throw new Error('Replicate returned no image output');
+  }
+  if (typeof first === 'string') {
+    return first;
+  }
+  if (typeof first.url === 'function') {
+    return first.url().toString();
+  }
+  if (first.url && typeof first.url === 'string') {
+    return first.url;
+  }
+  if (first.href && typeof first.href === 'string') {
+    return first.href;
+  }
+  throw new Error(`Unsupported Replicate image output: ${JSON.stringify(first).slice(0, 200)}`);
+}
+
+async function generateImageWithReplicate(modelPreset, prompt) {
+  if (!process.env.REPLICATE_API_KEY) {
+    throw new Error('REPLICATE_API_KEY fehlt');
+  }
+
+  const input = {
+    prompt: prompt,
+  };
+
+  const output = await replicate.run(modelPreset.model, { input });
+  const imageUrl = extractReplicateImageUrl(output);
+  if (!/^https?:\/\//.test(imageUrl)) {
+    throw new Error('Replicate returned an invalid image URL');
+  }
+  return imageUrl;
+}
+
 // API Endpoint für Bild-Kombination
 app.post('/api/merge', async (req, res) => {
   try {
-    const { image1, image2, style = 'realistic', model = 'dalle3' } = req.body;
+    const { image1, image2, style = 'realistic', model = 'flux_schnell' } = req.body;
     
     if (!image1 || !image2) {
       return res.status(400).json({ error: 'Beide Bilder erforderlich' });
     }
     
     const stylePreset = STYLE_PRESETS[style] || STYLE_PRESETS.realistic;
-    const modelPreset = MODEL_PRESETS[model] || MODEL_PRESETS.dalle3;
-    console.log(`🎨 Stil: ${stylePreset.name} | 🤖 Model: ${modelPreset.name}`);
+    const requestedModel = MODEL_PRESETS[model] ? model : 'flux_schnell';
+    const modelPreset = MODEL_PRESETS[requestedModel] || MODEL_PRESETS.flux_schnell;
+    console.log(`🎨 Stil: ${stylePreset.name} | 🤖 Model: ${modelPreset.name} via Replicate`);
         
     console.log('🎨 Analysiere Bild 1 mit GPT-4 Vision...');
     
@@ -324,28 +366,22 @@ A single creature: ${concept1}. One unified creature, centered composition.`;
 ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
     }
 
-    console.log('✨ Generiere kombiniertes Bild mit DALL-E 3...');
+    if (modelPreset.provider !== 'replicate') {
+      throw new Error(`Bildgenerierung ist nur über Replicate erlaubt; unerlaubter Provider: ${modelPreset.provider}`);
+    }
 
+    console.log(`✨ Generiere kombiniertes Bild mit Replicate (${modelPreset.model})...`);
+    const imageUrl = await generateImageWithReplicate(modelPreset, mergePrompt);
     
-    // Mit DALL-E 3 kombiniertes Bild generieren
-    const imageResponse = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: mergePrompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard'
-    });
-    
-    const imageUrl = imageResponse.data[0].url;
-    
-    console.log('✅ Bild erfolgreich kombiniert!');
+    console.log('✅ Bild erfolgreich via Replicate kombiniert!');
     
     // Save images and metadata
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const savedData = await saveImageSet(clientIp, style, image1, image2, imageUrl, {
       userAgent: userAgent,
-      model: model,
+      model: requestedModel,
+      requestedModel: model,
       modelName: modelPreset.name,
       provider: modelPreset.provider,
       replicateModel: modelPreset.model || null,
@@ -366,7 +402,8 @@ ${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
       meta: {
         style: style,
         styleName: stylePreset.name,
-        model: model,
+        model: requestedModel,
+        requestedModel: model,
         modelName: modelPreset.name,
         provider: modelPreset.provider,
         description1: desc1,
@@ -513,6 +550,7 @@ app.delete('/admin/logs/old/:index', basicAuth, (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🎨 Bild-Kombinator läuft auf http://localhost:${PORT}`);
-  console.log('💡 OpenAI API Key:', process.env.OPENAI_API_KEY ? '✓ gesetzt' : '✗ fehlt');
+  console.log('💡 OpenAI API Key (Beschreibungen):', process.env.OPENAI_API_KEY ? '✓ gesetzt' : '✗ fehlt');
+  console.log('🖼️ Replicate API Key (Bildgenerierung):', process.env.REPLICATE_API_KEY ? '✓ gesetzt' : '✗ fehlt');
   console.log('🔒 Admin: https://merge.eulencode.de/admin/logs');
 });
