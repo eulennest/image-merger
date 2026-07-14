@@ -18,13 +18,10 @@ const PORT = process.env.PORT || 3100;
 const APP_DATA_DIR = path.join(__dirname, 'appdata');
 const LOG_FILE = path.join(APP_DATA_DIR, 'merge-logs.json');
 const VISION_CACHE_FILE = path.join(APP_DATA_DIR, 'vision-cache.json');
-const MERGE_CACHE_FILE = path.join(APP_DATA_DIR, 'merge-gpt-cache.json');
 const UPLOADS_DIR = path.join(APP_DATA_DIR, 'uploads');
 const VISION_PROMPT = 'Beschreibe dieses Bild in 2-3 prägnanten Sätzen. Fokussiere auf Hauptmerkmale, Farben, Stil und Objekte.';
 const VISION_PROMPT_VERSION = 'image-description-v1';
-const MERGE_PROMPT_VERSION = 'merge-concept-v1';
 const MAX_VISION_CACHE_ENTRIES = 2000;
-const MAX_MERGE_CACHE_ENTRIES = 2000;
 
 // OpenAI API Key aus Environment
 const openai = new OpenAI({
@@ -170,71 +167,9 @@ function writeVisionCache(cache) {
 }
 
 
-function normalizeExtraInstruction(extraInstruction) {
-  return String(extraInstruction || '').trim().slice(0, 1000);
-}
-
-function readMergeCache() {
-  try {
-    if (fs.existsSync(MERGE_CACHE_FILE)) {
-      return JSON.parse(fs.readFileSync(MERGE_CACHE_FILE, 'utf8'));
-    }
-  } catch (err) {
-    console.error('Error reading merge GPT cache:', err);
-  }
-  return {};
-}
-
-function writeMergeCache(cache) {
-  let current = {};
-  try {
-    if (fs.existsSync(MERGE_CACHE_FILE)) {
-      current = JSON.parse(fs.readFileSync(MERGE_CACHE_FILE, 'utf8'));
-    }
-  } catch (err) {
-    console.error('Error merging merge GPT cache:', err);
-  }
-
-  const merged = { ...current, ...cache };
-  const entries = Object.entries(merged)
-    .sort((a, b) => new Date(b[1].lastUsedAt || b[1].createdAt || 0) - new Date(a[1].lastUsedAt || a[1].createdAt || 0))
-    .slice(0, MAX_MERGE_CACHE_ENTRIES);
-  fs.writeFileSync(MERGE_CACHE_FILE, JSON.stringify(Object.fromEntries(entries), null, 2));
-}
-
-function buildMergeCacheKey({ image1Hash, image2Hash, style, extraInstruction }) {
-  const payload = JSON.stringify({
-    version: MERGE_PROMPT_VERSION,
-    image1Hash,
-    image2Hash,
-    style,
-    extraInstruction: normalizeExtraInstruction(extraInstruction)
-  });
-  return crypto.createHash('sha256').update(payload).digest('hex');
-}
-
-async function createMergedConceptWithCache({ desc1, desc2, image1Hash, image2Hash, style, stylePreset, extraInstruction }) {
-  const normalizedExtraInstruction = normalizeExtraInstruction(extraInstruction);
-  const cacheKey = buildMergeCacheKey({ image1Hash, image2Hash, style, extraInstruction: normalizedExtraInstruction });
-  const cache = readMergeCache();
-  const cached = cache[cacheKey];
-
-  if (cached && cached.mergedConcept) {
-    cached.lastUsedAt = new Date().toISOString();
-    cached.hits = (cached.hits || 0) + 1;
-    writeMergeCache(cache);
-    console.log(`♻️ Merge GPT Cache HIT: ${cacheKey.slice(0, 12)}`);
-    return {
-      mergedConcept: cached.mergedConcept,
-      systemPrompt: cached.systemPrompt,
-      userPrompt: cached.userPrompt,
-      cacheKey,
-      cacheHit: true
-    };
-  }
-
-  const systemPrompt = `Du bist ein präziser Creative Director für Bildgenerierung. Deine Aufgabe ist NICHT, zwei Bilder nebeneinander zu beschreiben, sondern ein einziges neues, zusammenhängendes Motiv zu entwerfen, das beide Quellen verschmilzt. Antworte nur mit dem finalen Motivkonzept, ohne Erklärtext.`;
-  const userPrompt = `Erzeuge EIN stabiles, wiederverwendbares Motivkonzept für ein Text-to-Image-Modell.
+async function createMergedConcept({ desc1, desc2, style, stylePreset }) {
+  const systemPrompt = `Du bist ein präziser, aber variabler Creative Director für Bildgenerierung. Deine Aufgabe ist NICHT, zwei Bilder nebeneinander zu beschreiben, sondern ein einziges neues, zusammenhängendes Motiv zu entwerfen, das beide Quellen verschmilzt. Erzeuge bei jedem Versuch eine frische Interpretation. Antworte nur mit dem finalen Motivkonzept, ohne Erklärtext.`;
+  const userPrompt = `Erzeuge EIN neues Motivkonzept für ein Text-to-Image-Modell.
 
 Style: ${stylePreset.name}
 Style-Vorgabe: ${stylePreset.suffix}
@@ -245,19 +180,17 @@ ${desc1}
 Quelle B:
 ${desc2}
 
-${normalizedExtraInstruction ? `Extra-Anweisung des Nutzers:
-${normalizedExtraInstruction}
-` : ''}
 Regeln:
 - EIN einziges neues Bildmotiv, keine Collage.
 - Kein Split-Screen, kein Diptychon, kein vorher/nachher, keine zwei Panels.
 - Nicht einfach A links und B rechts platzieren.
-- Die wichtigsten Objekte, Farben, Formen, Materialien und Stimmung aus beiden Quellen zu einem zusammenhängenden Motiv verschmelzen.
+- Verschmilz Objekte, Farben, Formen, Materialien und Stimmung aus beiden Quellen zu einem zusammenhängenden Motiv.
 - Das Konzept muss für den Style "${stylePreset.name}" optimiert sein.
+- Erzeuge eine frische Variante; andere Gewichtung/Komposition/Details als bei vorherigen Versuchen sind ausdrücklich erwünscht.
 - Maximal 45 Wörter.
 - Keine Markdown-Liste, keine Anführungszeichen.`;
 
-  console.log('🧠 Erstelle Merge-GPT-Konzept...');
+  console.log('🧠 Erstelle frisches Merge-GPT-Konzept...');
   const conceptResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
@@ -265,33 +198,17 @@ Regeln:
       { role: 'user', content: userPrompt }
     ],
     max_tokens: 120,
-    temperature: 0
+    temperature: 0.95,
+    presence_penalty: 0.25,
+    frequency_penalty: 0.15
   });
 
   const mergedConcept = conceptResponse.choices[0].message.content.trim().replace(/^["']|["']$/g, '');
-  cache[cacheKey] = {
-    cacheKey,
-    promptVersion: MERGE_PROMPT_VERSION,
-    image1Hash,
-    image2Hash,
-    style,
-    styleName: stylePreset.name,
-    extraInstruction: normalizedExtraInstruction || null,
-    systemPrompt,
-    userPrompt,
-    mergedConcept,
-    createdAt: new Date().toISOString(),
-    lastUsedAt: new Date().toISOString(),
-    hits: 0
-  };
-  writeMergeCache(cache);
-  console.log(`💾 Merge GPT Cache MISS gespeichert: ${cacheKey.slice(0, 12)}`);
-  console.log('💡 Merge-Konzept:', mergedConcept);
+  console.log('💡 Frisches Merge-Konzept:', mergedConcept);
   return {
     mergedConcept,
     systemPrompt,
     userPrompt,
-    cacheKey,
     cacheHit: false
   };
 }
@@ -535,8 +452,7 @@ async function generateImageWithReplicate(modelPreset, prompt) {
 // API Endpoint für Bild-Kombination
 app.post('/api/merge', async (req, res) => {
   try {
-    const { image1, image2, style = 'realistic', model = 'flux_schnell', extraInstruction = '' } = req.body;
-    const normalizedExtraInstruction = normalizeExtraInstruction(extraInstruction);
+    const { image1, image2, style = 'realistic', model = 'flux_schnell' } = req.body;
     
     if (!image1 || !image2) {
       return res.status(400).json({ error: 'Beide Bilder erforderlich' });
@@ -558,14 +474,11 @@ app.post('/api/merge', async (req, res) => {
     console.log('📝 Bild 1 (raw):', desc1);
     console.log('📝 Bild 2 (raw):', desc2);
     
-    const mergeConcept = await createMergedConceptWithCache({
+    const mergeConcept = await createMergedConcept({
       desc1,
       desc2,
-      image1Hash: vision1.imageHash,
-      image2Hash: vision2.imageHash,
       style,
-      stylePreset,
-      extraInstruction: normalizedExtraInstruction
+      stylePreset
     });
     const concept1 = mergeConcept.mergedConcept;
     const gptConceptPrompt = mergeConcept.systemPrompt;
@@ -585,8 +498,6 @@ Composition rules (very important):
 
 Core concept: ${concept1}
 Visual style: ${stylePreset.suffix}
-${normalizedExtraInstruction ? `User extra direction for ChatGPT merge: ${normalizedExtraInstruction}
-` : ''}
 ${noTileInstructions}
 
 Final output: one unified ${style === 'brainrot' || style === 'cute_monster' || style === 'fusion' ? 'creature' : 'image'} in one coherent composition.`;
@@ -622,9 +533,7 @@ Final output: one unified ${style === 'brainrot' || style === 'cute_monster' || 
       gptConceptPrompt: gptConceptPrompt || null,
       gptConceptSystemPrompt: gptConceptSystemPrompt || null,
       gptConceptUserPrompt: gptConceptUserPrompt || null,
-      mergeGptCache: mergeConcept.cacheHit ? 'hit' : 'miss',
-      mergeGptCacheKey: mergeConcept.cacheKey,
-      extraInstruction: normalizedExtraInstruction || null,
+      mergeGptCache: 'disabled',
       creativeConcept: concept1,
       imagePrompt: mergePrompt,
       stylePromptSuffix: stylePreset.suffix
@@ -655,10 +564,8 @@ Final output: one unified ${style === 'brainrot' || style === 'cute_monster' || 
         gptConceptPrompt: gptConceptPrompt || null,
         gptConceptSystemPrompt: gptConceptSystemPrompt || null,
         gptConceptUserPrompt: gptConceptUserPrompt || null,
-        mergeGptCache: mergeConcept.cacheHit ? 'hit' : 'miss',
-        mergeGptCacheKey: mergeConcept.cacheKey,
-        extraInstruction: normalizedExtraInstruction || null,
-        imagePrompt: mergePrompt,
+        mergeGptCache: 'disabled',
+          imagePrompt: mergePrompt,
         stylePromptSuffix: stylePreset.suffix,
         sessionId: savedData.sessionId,
         sessionDir: savedData.sessionDir
