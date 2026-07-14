@@ -181,34 +181,82 @@ const MODEL_PRESETS = {
   dalle3: {
     name: 'Flux Schnell',
     provider: 'replicate',
-    model: 'black-forest-labs/flux-schnell'
+    model: 'black-forest-labs/flux-schnell',
+    inputDefaults: { aspect_ratio: '1:1', output_format: 'webp' }
   },
   flux_schnell: {
     name: 'Flux Schnell',
     provider: 'replicate',
-    model: 'black-forest-labs/flux-schnell'
+    model: 'black-forest-labs/flux-schnell',
+    inputDefaults: { aspect_ratio: '1:1', output_format: 'webp' }
   },
   flux_pro: {
     name: 'Flux Pro (HQ)',
     provider: 'replicate',
-    model: 'black-forest-labs/flux-1.1-pro'
+    model: 'black-forest-labs/flux-1.1-pro',
+    inputDefaults: { aspect_ratio: '1:1', output_format: 'webp' }
+  },
+  flux_2_klein: {
+    name: 'Flux 2 Klein',
+    provider: 'replicate',
+    model: 'black-forest-labs/flux-2-klein-4b',
+    inputDefaults: { aspect_ratio: '1:1', output_format: 'webp' }
+  },
+  imagen: {
+    name: 'Imagen 4 Fast',
+    provider: 'replicate',
+    model: 'google/imagen-4-fast',
+    inputDefaults: { aspect_ratio: '1:1' }
+  },
+  qwen_image: {
+    name: 'Qwen Image',
+    provider: 'replicate',
+    model: 'qwen/qwen-image',
+    inputDefaults: { aspect_ratio: '1:1', output_format: 'webp' }
+  },
+  recraft_v3: {
+    name: 'Recraft v3',
+    provider: 'replicate',
+    model: 'recraft-ai/recraft-v3',
+    inputDefaults: { aspect_ratio: '1:1' }
+  },
+  ideogram_v3: {
+    name: 'Ideogram v3 Turbo',
+    provider: 'replicate',
+    model: 'ideogram-ai/ideogram-v3-turbo',
+    inputDefaults: { aspect_ratio: '1:1', magic_prompt_option: 'Auto' }
+  },
+  sd35_turbo: {
+    name: 'Stable Diffusion 3.5 Turbo',
+    provider: 'replicate',
+    model: 'stability-ai/stable-diffusion-3.5-large-turbo',
+    inputDefaults: { aspect_ratio: '1:1', output_format: 'webp' }
   },
   sdxl_lightning: {
     name: 'SDXL Lightning',
     provider: 'replicate',
-    model: 'lucataco/sdxl-lightning-4step'
+    model: 'bytedance/sdxl-lightning-4step',
+    inputDefaults: { width: 768, height: 768, num_outputs: 1 }
+  },
+  proteus_anime: {
+    name: 'Proteus Anime',
+    provider: 'replicate',
+    model: 'datacte/proteus-v0.3',
+    inputDefaults: { width: 768, height: 768, num_outputs: 1 }
+  },
+  realistic_vision: {
+    name: 'Realistic Vision',
+    provider: 'replicate',
+    model: 'lucataco/realistic-vision-v5.1',
+    inputDefaults: { width: 768, height: 768, num_outputs: 1 }
   },
   // Legacy value kept for old browsers with localStorage set to "playground".
-  // Replicate's model-predictions endpoint currently 404s for this model, so route it to Flux Schnell.
+  // Use the newest known Playground v2.5 version explicitly; naked model predictions can 404.
   playground: {
-    name: 'Flux Schnell',
+    name: 'Playground v2.5',
     provider: 'replicate',
-    model: 'black-forest-labs/flux-schnell'
-  },
-  imagen: {
-    name: 'Google Imagen 4',
-    provider: 'replicate',
-    model: 'google/imagen-4-fast'
+    model: 'playgroundai/playground-v2.5-1024px-aesthetic:a45f82a1382bed5c7aeb861dac7c7d191b0fdf74d8d57c4a0e6ed7d4d0bf7d24',
+    inputDefaults: { width: 1024, height: 1024, num_outputs: 1 }
   }
 };
 
@@ -239,6 +287,7 @@ async function generateImageWithReplicate(modelPreset, prompt) {
   }
 
   const input = {
+    ...(modelPreset.inputDefaults || {}),
     prompt: prompt,
   };
 
@@ -353,19 +402,35 @@ GUT: "Eine schwebende Dose mit Federflügeln und hypnotischem Blick"`;
       console.log('💡 Kreatives Konzept:', concept1);
     }
     
-    // Kombinations-Prompt generieren - als EIN vereintes Konzept
+    // Kombinations-Prompt generieren - als EIN vereintes Konzept, nicht als Collage/Kachelbild.
+    const noTileInstructions = `
+Composition rules (very important):
+- Create ONE single final image, not two images.
+- Do NOT make a split-screen, diptych, before/after comparison, two panels, collage, grid, contact sheet, or side-by-side layout.
+- Do NOT place source image 1 on the left and source image 2 on the right.
+- Fuse the subjects, colors, objects, mood, and visual ideas into one coherent scene or one coherent subject.
+- The result must look like it was photographed/illustrated as one original image, not assembled from two references.`;
     let mergePrompt;
     
     if (style === 'brainrot' || style === 'cute_monster' || style === 'fusion') {
       // Monster/Fusion: Ein vereintes Konzept
-      mergePrompt = `Create a creature based on this concept:
+      mergePrompt = `Create a new image from this fused concept:
 
-A single creature: ${concept1}. One unified creature, centered composition.`;
+Core concept: ${concept1}
+Visual style: ${stylePreset.suffix}
+${noTileInstructions}
+
+Final output: one unified creature in one unified composition.`;
     } else {
       // Andere Stile: Auch als ein Konzept
-      mergePrompt = `Create an image based on this concept:
+      mergePrompt = `Create a new image that fuses these two source descriptions into ONE coherent result:
 
-${desc1}, ${desc2}. One unified image, creative fusion of both elements.`;
+Source inspiration A: ${desc1}
+Source inspiration B: ${desc2}
+Visual style: ${stylePreset.suffix}
+${noTileInstructions}
+
+Final output: one unified image where the two inspirations are merged into the same subject/scene.`;
     }
 
     if (modelPreset.provider !== 'replicate') {
