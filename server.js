@@ -473,6 +473,7 @@ Final output: one unified image where the two inspirations are merged into the s
         requestedModel: model,
         modelName: modelPreset.name,
         provider: modelPreset.provider,
+        replicateModel: modelPreset.model || null,
         description1: desc1,
         description2: desc2,
         creativeConcept: concept1 !== desc1 ? concept1 : null,
