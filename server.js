@@ -235,19 +235,19 @@ const MODEL_PRESETS = {
   sdxl_lightning: {
     name: 'SDXL Lightning',
     provider: 'replicate',
-    model: 'bytedance/sdxl-lightning-4step',
+    model: 'bytedance/sdxl-lightning-4step:6f7a773af6fc3e8de9d5a3c00be77c17308914bf67772726aff83496ba1e3bbe',
     inputDefaults: { width: 768, height: 768, num_outputs: 1 }
   },
   proteus_anime: {
     name: 'Proteus Anime',
     provider: 'replicate',
-    model: 'datacte/proteus-v0.3',
+    model: 'datacte/proteus-v0.3:b28b79d725c8548b173b6a19ff9bffd16b9b80df5b18b8dc5cb9e1ee471bfa48',
     inputDefaults: { width: 768, height: 768, num_outputs: 1 }
   },
   realistic_vision: {
     name: 'Realistic Vision',
     provider: 'replicate',
-    model: 'lucataco/realistic-vision-v5.1',
+    model: 'lucataco/realistic-vision-v5.1:2c8e954decbf70b7607a4414e5785ef9e4de4b8c51d50fb8b8b349160e0ef6bb',
     inputDefaults: { width: 768, height: 768, num_outputs: 1 }
   },
   // Legacy value kept for old browsers with localStorage set to "playground".
