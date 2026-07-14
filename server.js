@@ -198,10 +198,12 @@ const MODEL_PRESETS = {
     provider: 'replicate',
     model: 'lucataco/sdxl-lightning-4step'
   },
+  // Legacy value kept for old browsers with localStorage set to "playground".
+  // Replicate's model-predictions endpoint currently 404s for this model, so route it to Flux Schnell.
   playground: {
-    name: 'Playground v2.5',
+    name: 'Flux Schnell',
     provider: 'replicate',
-    model: 'playgroundai/playground-v2.5-1024px-aesthetic'
+    model: 'black-forest-labs/flux-schnell'
   },
   imagen: {
     name: 'Google Imagen 4',
