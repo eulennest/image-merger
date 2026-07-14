@@ -592,6 +592,18 @@
                 });
 
                 if (!response.ok) {
+                    let serverError = '';
+                    try {
+                        const errorData = await response.json();
+                        serverError = errorData.error || '';
+                    } catch (_) {}
+
+                    if (response.status === 429) {
+                        throw new Error('Zu schnell geklickt: Replicate bremst gerade. Bitte kurz warten und nochmal versuchen.');
+                    }
+                    if (response.status === 422 || /NSFW|safety|content policy/i.test(serverError)) {
+                        throw new Error('Das Modell hat den Prompt fälschlich als Safety/NSFW blockiert. Bitte nochmal versuchen oder ein anderes Modell wählen.');
+                    }
                     throw new Error('Kombination fehlgeschlagen');
                 }
 
@@ -603,7 +615,7 @@
                 // Save to history (LocalStorage)
                 saveToHistory(data.imageUrl, data.meta);
             } catch (err) {
-                error.textContent = '❌ Oops! Etwas ist schiefgelaufen. Versuche es nochmal!';
+                error.textContent = `❌ ${err.message || 'Oops! Etwas ist schiefgelaufen. Versuche es nochmal!'}`;
                 error.classList.add('show');
             } finally {
                 loading.classList.remove('show');

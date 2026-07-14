@@ -187,6 +187,7 @@ Regeln:
 - Verschmilz Objekte, Farben, Formen, Materialien und Stimmung aus beiden Quellen zu einem zusammenhängenden Motiv.
 - Das Konzept muss für den Style "${stylePreset.name}" optimiert sein.
 - Erzeuge eine frische Variante; andere Gewichtung/Komposition/Details als bei vorherigen Versuchen sind ausdrücklich erwünscht.
+- Familienfreundlich und kindgerecht: keine Nacktheit, keine Sexualisierung, kein Gore, keine realistische Gewalt.
 - Maximal 45 Wörter.
 - Keine Markdown-Liste, keine Anführungszeichen.`;
 
@@ -312,7 +313,7 @@ const STYLE_PRESETS = {
   },
   cute_monster: {
     name: 'Niedliche Monster',
-    suffix: 'Transform into cute/adorable anthropomorphic 3D character, giant googly eyes, exaggerated happy expressions, chubby rounded body, smooth 3D render, vibrant pastel colors, Pixar style.'
+    suffix: 'Transform into a cute/adorable anthropomorphic 3D character, giant googly eyes, exaggerated happy expressions, rounded plush-like body, smooth 3D render, vibrant pastel colors, family-friendly Pixar-like style.'
   },
   brainrot: {
     name: 'Brainrot (cursed)',
@@ -431,6 +432,62 @@ function extractReplicateImageUrl(output) {
   throw new Error(`Unsupported Replicate image output: ${JSON.stringify(first).slice(0, 200)}`);
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(errorMessage) {
+  const retryAfterMatch = String(errorMessage || '').match(/"retry_after"\s*:\s*(\d+)/i);
+  if (retryAfterMatch) return (Number(retryAfterMatch[1]) + 1) * 1000;
+  const resetsMatch = String(errorMessage || '').match(/resets in ~?(\d+)s/i);
+  if (resetsMatch) return (Number(resetsMatch[1]) + 1) * 1000;
+  return 7000;
+}
+
+function isRateLimitError(error) {
+  const msg = String(error?.message || error || '');
+  return /429|Too Many Requests|rate limit|throttled/i.test(msg);
+}
+
+function isNsfwError(error) {
+  const msg = String(error?.message || error || '');
+  return /NSFW content detected|safety|content policy/i.test(msg);
+}
+
+async function runReplicateWithRetries(modelPreset, input) {
+  let lastError;
+  let nsfwRetryUsed = false;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await replicate.run(modelPreset.model, { input });
+    } catch (error) {
+      lastError = error;
+      const msg = String(error?.message || error || '');
+
+      if (isRateLimitError(error) && attempt < 3) {
+        const waitMs = parseRetryAfterMs(msg);
+        console.warn(`⏳ Replicate Rate-Limit, warte ${Math.round(waitMs / 1000)}s und versuche erneut (${attempt}/3)...`);
+        await sleep(waitMs);
+        continue;
+      }
+
+      if (isNsfwError(error) && !nsfwRetryUsed) {
+        nsfwRetryUsed = true;
+        input.prompt = `${input.prompt}
+
+Safety clarification: family-friendly, child-safe, non-sexual, no nudity, no erotic content, no gore, no realistic violence. Keep it wholesome and playful.`;
+        console.warn('🧯 Replicate NSFW/Safety false positive möglich; retry mit entschärftem Prompt...');
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
 async function generateImageWithReplicate(modelPreset, prompt) {
   if (!process.env.REPLICATE_API_KEY) {
     throw new Error('REPLICATE_API_KEY fehlt');
@@ -441,7 +498,7 @@ async function generateImageWithReplicate(modelPreset, prompt) {
     prompt: prompt,
   };
 
-  const output = await replicate.run(modelPreset.model, { input });
+  const output = await runReplicateWithRetries(modelPreset, input);
   const imageUrl = extractReplicateImageUrl(output);
   if (!/^https?:\/\//.test(imageUrl)) {
     throw new Error('Replicate returned an invalid image URL');
@@ -492,7 +549,8 @@ Composition rules (very important):
 - Do NOT make a split-screen, diptych, before/after comparison, two panels, collage, grid, contact sheet, or side-by-side layout.
 - Do NOT place source image 1 on the left and source image 2 on the right.
 - Fuse the subjects, colors, objects, mood, and visual ideas into one coherent scene or one coherent subject.
-- The result must look like it was photographed/illustrated as one original image, not assembled from two references.`;
+- The result must look like it was photographed/illustrated as one original image, not assembled from two references.
+- Safety: family-friendly, child-safe, non-sexual, no nudity, no erotic content, no gore, no realistic violence.`;
 
     const mergePrompt = `Create a new image from this GPT-merged concept:
 
@@ -565,7 +623,7 @@ Final output: one unified ${style === 'brainrot' || style === 'cute_monster' || 
         gptConceptSystemPrompt: gptConceptSystemPrompt || null,
         gptConceptUserPrompt: gptConceptUserPrompt || null,
         mergeGptCache: 'disabled',
-          imagePrompt: mergePrompt,
+        imagePrompt: mergePrompt,
         stylePromptSuffix: stylePreset.suffix,
         sessionId: savedData.sessionId,
         sessionDir: savedData.sessionDir
@@ -573,8 +631,10 @@ Final output: one unified ${style === 'brainrot' || style === 'cute_monster' || 
     });
     
   } catch (error) {
-    console.error('❌ Fehler:', error.message);
-    res.status(500).json({ error: error.message });
+    const message = error?.message || String(error);
+    console.error('❌ Fehler:', message);
+    const status = isRateLimitError(error) ? 429 : (isNsfwError(error) ? 422 : 500);
+    res.status(status).json({ error: message });
   }
 });
 
